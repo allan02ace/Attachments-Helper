@@ -25,7 +25,7 @@
   }
   function pull(){
     pulling=true;
-    return db.collection('users').doc(user.uid).get().then(function(d){
+    return db.collection('birdat_users').doc(user.uid).get().then(function(d){
       var remote={};try{remote=JSON.parse((d.exists&&d.data().profiles)||'{}')}catch(e){}
       var local=getP(),merged=Object.assign({},local,remote);   // the account's copy wins when a name exists in both
       var changed=JSON.stringify(merged)!==JSON.stringify(remote);
@@ -39,7 +39,7 @@
   function push(o,now){
     if(!user||pulling&&!now)return;
     clearTimeout(timer);
-    var run=function(){return db.collection('users').doc(user.uid).set({profiles:JSON.stringify(o),email:user.email||'',updated:firebase.firestore.FieldValue.serverTimestamp()},{merge:true})
+    var run=function(){return db.collection('birdat_users').doc(user.uid).set({profiles:JSON.stringify(o),email:user.email||'',updated:firebase.firestore.FieldValue.serverTimestamp()},{merge:true})
       .catch(function(e){say('Could not save your profiles to your account: '+(e.code||e.message),1)})};
     if(now)return run();
     timer=setTimeout(run,600);
