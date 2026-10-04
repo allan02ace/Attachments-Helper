@@ -253,7 +253,8 @@ main{padding-bottom:0}
    <div class="xbtns">
     <button id="dl" class="primary" type="button">Download .xls</button>
     <button id="dleq" class="primary" type="button" hidden title="One file is made for each month">Download .xls</button>
-    <button id="gen" type="button">Generate DAT file</button>
+    <button id="dlsa" class="primary" type="button" hidden title="Saves the Relief Sales rows as an .xls file">Download .xls</button>
+     <button id="gen" type="button">Generate DAT file</button>
    </div>
   </div>
  </div>
@@ -663,7 +664,7 @@ $('#dl').onclick=async()=>{
     const buf=buildXls(res.recs,b64ToU8(TPL));
     const a=document.createElement('a');
     a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.ms-excel'}));
-    a.download='Relief_Purchases_'+fname.replace(/\.[^.]+$/,'').replace(/[^A-Za-z0-9_-]+/g,'_')+'.xls';
+    {const my=perMY();a.download=outName('SLP',my[0],my[1]);}
     document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(a.href),4000);
     msg('Downloaded '+res.recs.length+' rows.');
@@ -991,7 +992,7 @@ function saveXls(buf,name){
     const ks=Object.keys(by).map(Number).sort((a,b)=>a-b);
     if(!ks.length){msg('No row has a readable month, so no 1601-EQ file was made.',1);return}
     try{
-      const base=fname.replace(/\.[^.]+$/,'').replace(/[^A-Za-z0-9_-]+/g,'_'),files=ks.map(k=>[buildEqXls(by[k],b64ToU8(TPL2)),'1601EQ_Schedule1_'+Math.floor(k/100)+'-'+String(k%100).padStart(2,'0')+'_'+base+'.xls']);
+      const base=fname.replace(/\.[^.]+$/,'').replace(/[^A-Za-z0-9_-]+/g,'_'),files=ks.map(k=>[buildEqXls(by[k],b64ToU8(TPL2)),outName('QAP',String(k%100).padStart(2,'0'),String(Math.floor(k/100)))]);
       files.forEach((f,i)=>setTimeout(()=>saveXls(f[0],f[1]),i*400));
       msg('Downloading '+files.length+' 1601-EQ file(s), one per month.'+(skipped?' '+skipped+' row(s) without a month were left out.':''));
     }catch(err){msg('Could not create the 1601-EQ file: '+(err&&err.message||err),1)}
@@ -1155,6 +1156,22 @@ $('#sasumbtn').onclick=()=>{if(!showSaSummary())msg('There are no Relief Sales r
 $('#sasheet').onchange=e=>saUse(e.target.value);
 $('#gap').addEventListener('change',saRecompute);
 
+// ---- Excel file names: <saved filer name>_<SLP|SLS|QAP>_<MMYYYY>.xls  e.g. UPRDC_SLP_092026.xls ----
+function perMY(){const p=$('#f_per').value;if(/^\d{4}-\d{2}/.test(p))return [p.slice(5,7),p.slice(0,4)];const d=new Date(),e=new Date(d.getFullYear(),d.getMonth(),0);return [String(e.getMonth()+1).padStart(2,'0'),String(e.getFullYear())]}
+function outName(code,mm,yyyy){
+  let n=($('#pf_list').value||$('#pf_name').value||F('co').value||[F('ln').value,F('fn').value].join(' ')||'').trim();
+  n=n.replace(/[^A-Za-z0-9]+/g,'_').replace(/^_+|_+$/g,'')||'FILER';
+  return n+'_'+code+'_'+mm+yyyy+'.xls';
+}
+$('#dlsa').onclick=()=>{
+  if(!saHas()){msg('There are no Relief Sales rows to write.',1);return}
+  try{
+    const out=XLSX.utils.book_new();XLSX.utils.book_append_sheet(out,wb.Sheets[$('#sasheet').value],'R_Sales');
+    const buf=XLSX.write(out,{bookType:'biff8',type:'array'}),my=perMY(),name=outName('SLS',my[0],my[1]);
+    saveXls(buf,name);msg('Downloaded '+name+'.');
+  }catch(err){msg('Could not create the file: '+(err&&err.message||err),1)}
+};
+
 // ---- Relief Sales DAT file ----
 // Header: H,S,TIN,names,trade name,address1,address2,exempt,zeroRated,taxable,outputVat,RDO,period end,fiscal month
 // Detail: D,S,client TIN,names,address1,address2,exempt,zeroRated,taxable,outputVat,filer TIN,period end   (empty text = nothing between the commas)
@@ -1194,7 +1211,7 @@ function setTab(t,focus){
   });
   const multi=!!wb&&wb.SheetNames.length>1;
   $('#sheet').hidden=!(t==='rel'&&multi);$('#eqsheet').hidden=!(t==='eq'&&multi);$('#sasheet').hidden=!(t==='sa'&&multi);
-  $('#dl').hidden=t!=='rel';$('#dleq').hidden=t!=='eq';       // Relief Sales has no .xls download: the template is the input
+  $('#dl').hidden=t!=='rel';$('#dleq').hidden=t!=='eq';$('#dlsa').hidden=t!=='sa';
   $('#f_rt').value=t==='eq'?'QAP 1601EQ':t==='sa'?'RELIEF Sales':'RELIEF Purchases';      // the DAT button follows the open tab
 }
 // Relief and 1601-EQ sheets share column names (TIN, names...), so a tab only counts as "having data"
