@@ -857,8 +857,19 @@ function eqHeader(a){
   for(let i=0;i<Math.min(a.length,40);i++){const sc=eqMap(a[i]).filter(x=>x>=0).length;if(sc>b.score)b={row:i,score:sc}}
   return b;
 }
-function eqRecs(a,hr,map,gap){
-  const recs=[];
+// EWT rates are 0.5, 1, 2, 5, 10 (percent). A file can also hold them as fractions (0.005, 0.01, 0.02, 0.05, 0.1), usually in a % formatted column.
+// Decided once per file: % formatted column -> fractions; otherwise any rate above 0.1 -> already percent; otherwise fractions.
+function eqRateMode(a,hr,map,fa){
+  const c=map[EQI.rt];if(c<0)return 'pct';
+  let mx=0,pc=false;
+  for(let i=hr+1;i<a.length;i++){
+    const v=(a[i]||[])[c];if(typeof v==='number'&&v>mx)mx=v;
+    const f=fa&&fa[i]&&fa[i][c];if(typeof f==='string'&&f.indexOf('%')>=0)pc=true;
+  }
+  return pc||(mx>0&&mx<=0.1)?'frac':'pct';
+}
+function eqRecs(a,hr,map,gap,fa){
+  const recs=[],mode=eqRateMode(a,hr,map,fa);
   for(let i=hr+1;i<a.length;i++){
     const row=a[i]||[],g=k=>{const c=map[EQI[k]];return c>=0?row[c]:null};
     const t0=g('tin');let dg=String(t0==null?'':t0).replace(/\D/g,'');
@@ -867,7 +878,7 @@ function eqRecs(a,hr,map,gap){
     const pm=parseMonth(g('mo')),rec={src:i,mo:pm?pm[0]:null,yr:pm?pm[1]:null,br:b?Number(b.slice(-4)):0,
       co:cleanText(g('co')),ln:cleanText(g('ln')),fn:cleanText(g('fn')),mn:cleanText(g('mn')),
       atc:cleanText(g('atc')).replace(/\s/g,'').toUpperCase(),am:toNum(g('am')),
-      rt:typeof rv==='number'?(rv>0&&rv<1?r2(rv*100):r2(rv)):toNum(rv)};   // 0.01 (a % cell) -> 1
+      rt:typeof rv==='number'?(mode==='frac'?r2(rv*100):r2(rv)):toNum(rv)};   // 0.01 in a % column -> 1; 0.5 stays 0.5
     if(!dg&&!(rec.co||rec.ln||rec.fn)){if(gap&&recs.length)break;continue}
     if(!dg&&/^(grand\s+)?total/i.test(rec.co))continue;
     rec.tin=dg?Number(dg):null;rec.tinOk=dg.length===9;recs.push(rec);
@@ -952,11 +963,12 @@ function eqInit(){
 }
 function eqUse(n){
   eq.aoa=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null});
+  eq.fa=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:false,defval:null});   // cell text as shown, to see % formats
   const h=eqHeader(eq.aoa);eq.hr=h.score>=4?h.row:-1;
   eq.map=eq.hr>=0?eqMap(eq.aoa[eq.hr]):EQF.map(()=>-1);eqRecompute();
 }
 function eqRecompute(){
-  eq.recs=eq.hr>=0?eqRecs(eq.aoa,eq.hr,eq.map,$('#gap').checked):[];
+  eq.recs=eq.hr>=0?eqRecs(eq.aoa,eq.hr,eq.map,$('#gap').checked,eq.fa):[];
   const hdr=eq.hr>=0?eq.aoa[eq.hr]:[];
   const opts=hdr.map((h,i)=>h==null||h===''?'':'<option value="'+i+'">'+colLetter(i)+' - '+esc(flat(h))+'</option>').join('');
   $('#eqmap').innerHTML='<tr><th>Template column</th><th>Taken from your file</th></tr>'+EQF.map((f,i)=>'<tr><td>'+f.t+'</td><td><select data-i="'+i+'"><option value="-1">(none)</option>'+opts+'</select></td></tr>').join('')+'<tr><td>tax_amount</td><td style="color:var(--mute)">Calculated: income_payment x ewt_rate / 100</td></tr>';
@@ -1004,17 +1016,18 @@ function saveXls(buf,name){
 function buildQapDat(recs,f,Y){
   const q=s=>'"'+s+'"',n2=v=>r2(v).toFixed(2),per=f.mm+'/'+f.yyyy;
   // One line per payee + branch + ATC + names (+ rate): the amounts of all rows (all months of the quarter) are added up,
-  // and every line carries the Reporting Period month. Tax = ROUND(total income x rate / 100, 2).
+  // and every line carries the Reporting Period month. Tax = sum of each row's ROUND(income x rate / 100, 2), same as the template's tax_amount.
   const g=new Map();
   recs.forEach(r=>{
     const t9=String(r.tin==null?'':r.tin).padStart(9,'0'),br=String(r.br).padStart(4,'0'),k=[t9,br,r.atc,r.co,r.ln,r.fn,r.mn,r.rt].join('|');
-    const x=g.get(k);if(x)x.am=r2(x.am+r.am);else g.set(k,{t9,br,co:r.co,ln:r.ln,fn:r.fn,mn:r.mn,atc:r.atc,rt:r.rt,am:r2(r.am)});
+    const tx=r2(r.am*r.rt/100),x=g.get(k);   // tax_amount of each row = ROUND(income_payment*ewt_rate/100,2), as in the template; a line adds up its rows' tax
+    if(x){x.am=r2(x.am+r.am);x.tx=r2(x.tx+tx)}else g.set(k,{t9,br,co:r.co,ln:r.ln,fn:r.fn,mn:r.mn,atc:r.atc,rt:r.rt,am:r2(r.am),tx});
   });
   const rows=[...g.values()].sort((a,b)=>a.t9<b.t9?-1:a.t9>b.t9?1:0);   // by payee TIN; ties keep file order
   let si=0,st=0;
   const L=['HQAP,H1601EQ,'+f.tin+','+f.br+',".",'+per+','+f.rdo.padStart(3,'0')];
   rows.forEach((r,i)=>{
-    const tax=r2(r.am*r.rt/100);si=r2(si+r.am);st=r2(st+tax);
+    const tax=r.tx;si=r2(si+r.am);st=r2(st+tax);
     L.push(['D1','1601EQ',i+1,r.t9,r.br,q(r.co),q(r.ln),q(r.fn),q(r.mn),per,r.atc,n2(r.rt),n2(r.am),n2(tax)].join(','));
   });
   L.push(['C1','1601EQ',f.tin,f.br,per,n2(si),n2(st)].join(','));
