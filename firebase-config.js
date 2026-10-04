@@ -1,8 +1,10 @@
-// Paste your Firebase web app config here (Firebase console > Project settings > Your apps > Web app > SDK setup and configuration).
-// This config is not a secret; access is controlled by the Firestore rules and the authorised domains.
+// Firebase web app config (project workhours-c20be). Not a secret: access is controlled by the Firestore rules and authorised domains.
 window.FIREBASE_CONFIG = {
-  apiKey: "PASTE_API_KEY",
-  authDomain: "PASTE_PROJECT_ID.firebaseapp.com",
-  projectId: "PASTE_PROJECT_ID",
-  appId: "PASTE_APP_ID"
+  apiKey: "AIzaSyDUGyE6hRRTIWVllVMxCKrIL9nUJdnpruk",
+  authDomain: "workhours-c20be.firebaseapp.com",
+  projectId: "workhours-c20be",
+  storageBucket: "workhours-c20be.firebasestorage.app",
+  messagingSenderId: "503952630484",
+  appId: "1:503952630484:web:8f21b2a60d053b45119141",
+  measurementId: "G-GME2F29HRW"
 };
