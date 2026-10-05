@@ -15,7 +15,8 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 "Segoe UI",system-ui,-apple-system,sans-serif}
 main{max-width:1100px;margin:0 auto;padding:0 18px 48px}
-h1{font-size:27px;font-weight:800;margin:0;letter-spacing:-.01em;color:var(--pageink)}
+h1{font-size:27px;font-weight:800;margin:0;letter-spacing:-.01em;color:var(--pageink);display:flex;align-items:center;gap:12px}
+.logo{width:40px;height:40px;flex:none;border-radius:9px;display:block}
 .drop{display:block;border:2px dashed var(--line);border-radius:10px;background:var(--panel);padding:28px 18px;text-align:center;cursor:pointer}
 .drop:hover,.drop.over{border-color:var(--acc)}
 .drop b{display:block;font-size:17px}.drop span{color:var(--mute)}
@@ -145,11 +146,13 @@ main{padding-bottom:0}
 #xbar .xfields input,#xbar .xfields select{background:var(--field);border-color:#4d6657}
 #xbar button:not(.primary){background:#243228;border-color:#4d6657}
 @media (max-width:700px){#xbar{position:static}.cardbar{flex-direction:column}.cardbar>button{align-self:flex-start}}
+.tinfix{width:100%;min-width:100px;font:inherit;font-size:13px;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:4px;padding:3px 6px}
+.prefnote{padding:8px 14px;color:var(--mute);font-size:13px}.prefnote button{background:none;border:0;color:var(--acc);text-decoration:underline;padding:0;cursor:pointer;font:inherit}
 </style>
 </head>
 <body>
 <main>
-<header class="top"><h1>Relief &amp; 1601-EQ Formatter</h1>
+<header class="top"><h1><img class="logo" src="icon-192.png" width="40" height="40" alt="">Relief &amp; 1601-EQ Formatter</h1>
  <button type="button" class="login" id="login">Log in</button></header>
 
 <label class="drop" id="drop"><input type="file" id="file" accept=".xlsx,.xls,.xlsm,.csv">
@@ -536,7 +539,7 @@ function useSheet(n){
   tmpl=t.score>=8&&t.score>g.score;fields=tmpl?TFIELDS:FIELDS;
   const h=tmpl?t:g;hr=h.row;
   if(h.score<4){hr=-1;map=fields.map(()=>-1);$('#info').innerHTML='<span class="bad">No header row matching the guide was found on this sheet.</span>';}
-  else map=autoMap(aoa[hr],fields);
+  else map=applyPrefs(tmpl?'relt':'relg',fields,aoa[hr],autoMap(aoa[hr],fields));
   recompute();
 }
 function applyEdit(r,e){
@@ -545,14 +548,14 @@ function applyEdit(r,e){
     else r[k]=e[k];
   }
 }
-const probs=r=>{const p=[];if(!r.tinOk)p.push(r.tin==null?'No TIN':'TIN not 9 digits');if(!(r.co||r.ln||r.fn))p.push('No name');
+const probs=r=>{const p=[];if(isSelf(r))p.push(SELFMSG);if(!r.tinOk)p.push(r.tin==null?'No TIN':'TIN not 9 digits');if(!(r.co||r.ln||r.fn))p.push('No name');
   if(!r.a1&&!r.a2)p.push('No address');else{if(!r.a1)p.push('No address 1');if(!r.a2)p.push('No address 2')}return p};
 function info(){
   if(hr<0)return;
   const miss=fields.filter((f,i)=>map[i]<0&&f.k!=='iv').map(f=>f.t);
   const bad=res.recs.filter(r=>probs(r).length).length;
   $('#info').innerHTML=(tmpl?'Ready template detected: its values are used as they are. ':'')+'Header found on row '+(hr+1)+'. <b>'+res.recs.length+'</b> rows will be written.'+
-    (bad?' <span class="warn">'+bad+' row(s) have a missing or wrong TIN, name or address. Use "Check and fix" below.</span>':'')+
+    (bad?' <span class="warn">'+bad+' row(s) have a missing or wrong TIN (or the filer\'s own TIN), name or address. Use "Check and fix" below.</span>':'')+
     (miss.length?' <span class="warn">No column found for: '+miss.join(', ')+' (filled with blank or 0).</span>':'');
 }
 function recompute(){
@@ -605,7 +608,7 @@ function renderMap(){
   $('#map').innerHTML=h;
   document.querySelectorAll('#map select').forEach(s=>{
     s.value=String(map[+s.dataset.i]);
-    s.onchange=()=>{map[+s.dataset.i]=+s.value;recompute()};
+    s.onchange=()=>{map[+s.dataset.i]=+s.value;savePref(tmpl?'relt':'relg',fields,+s.dataset.i,+s.value,hdr,autoMap(hdr,fields));recompute()};
   });
 }
 function renderPrev(){
@@ -613,7 +616,7 @@ function renderPrev(){
   let h='<tr>'+OUT.map(f=>'<th>'+f[1]+'</th>').join('')+'</tr>';
   res.recs.slice(0,5).forEach(r=>{
     h+='<tr>'+OUT.map((f,i)=>{
-      if(i===0)return '<td'+(r.tinOk?'':' class="bad"')+'>'+(r.tin==null?'':String(r.tin).padStart(9,'0'))+'</td>';
+      if(i===0)return '<td'+(r.tinOk&&!isSelf(r)?'':' class="bad"')+'>'+(r.tin==null?'':String(r.tin).padStart(9,'0'))+'</td>';
       return f[2]?'<td class="num">'+r[f[0]].toFixed(2)+'</td>':'<td>'+esc(r[f[0]])+'</td>';
     }).join('')+'</tr>';
   });
@@ -719,11 +722,21 @@ function buildDat(recs,f){
 }
 // Read the filer details from the header (H) line of an old DAT file
 function csvLine(l){const o=[];let c='',q=false;for(const ch of l){if(ch==='"')q=!q;else if(ch===','&&!q){o.push(c);c=''}else c+=ch}o.push(c);return o}
+// Reads the header (first) line of an old DAT file and lines it up like the Purchases header:
+// [2] TIN [3] name [4-6] last/first/middle [7] trade name [8-9] address [18] RDO [19] period [20] fiscal month.
+// Purchases:  H,P,...  21 fields    Sales:  H,S,...  17 fields    1601-EQ (QAP):  HQAP,H1601EQ,TIN,branch,".",MM/YYYY,RDO  (no names or address)
 function parseDatHeader(text){
   const line=String(text).split(/\r?\n/).find(l=>l.trim());
-  if(!line||!/^H,/.test(line))return null;
+  if(!line)return null;
   const p=csvLine(line);
-  return p.length>=19?p:null;
+  if(p[0]==='HQAP'&&p.length>=7){
+    const n=[];n[2]=p[2];n[18]=p[6];n.per=p[5];n.br=p[3];n.kind='1601-EQ';n.noNames=true;return n;
+  }
+  if(p[0]==='H'&&p[1]==='P'&&p.length>=19){p.kind='Purchases';return p}
+  if(p[0]==='H'&&p[1]==='S'&&p.length>=15){
+    const n=p.slice(0,10);n[18]=p[14];n[19]=p[15];n[20]=p[16];n.kind='Sales';return n;
+  }
+  return null;
 }
 // Best-effort split of the two address lines back into the six boxes
 const PROVS="ABRA|AGUSAN DEL NORTE|AGUSAN DEL SUR|AKLAN|ALBAY|ANTIQUE|APAYAO|AURORA|BASILAN|BATAAN|BATANES|BATANGAS|BENGUET|BILIRAN|BOHOL|BUKIDNON|BULACAN|CAGAYAN|CAMARINES NORTE|CAMARINES SUR|CAMIGUIN|CAPIZ|CATANDUANES|CAVITE|CEBU|COTABATO|DAVAO DE ORO|DAVAO DEL NORTE|DAVAO DEL SUR|DAVAO OCCIDENTAL|DAVAO ORIENTAL|DINAGAT ISLANDS|EASTERN SAMAR|GUIMARAS|IFUGAO|ILOCOS NORTE|ILOCOS SUR|ILOILO|ISABELA|KALINGA|LA UNION|LAGUNA|LANAO DEL NORTE|LANAO DEL SUR|LEYTE|MAGUINDANAO DEL NORTE|MAGUINDANAO DEL SUR|MARINDUQUE|MASBATE|METRO MANILA|MISAMIS OCCIDENTAL|MISAMIS ORIENTAL|MOUNTAIN PROVINCE|NEGROS OCCIDENTAL|NEGROS ORIENTAL|NORTHERN SAMAR|NUEVA ECIJA|NUEVA VIZCAYA|OCCIDENTAL MINDORO|ORIENTAL MINDORO|PALAWAN|PAMPANGA|PANGASINAN|QUEZON|QUIRINO|RIZAL|ROMBLON|SAMAR|SARANGANI|SIQUIJOR|SORSOGON|SOUTH COTABATO|SOUTHERN LEYTE|SULTAN KUDARAT|SULU|SURIGAO DEL NORTE|SURIGAO DEL SUR|TARLAC|TAWITAWI|ZAMBALES|ZAMBOANGA DEL NORTE|ZAMBOANGA DEL SUR|ZAMBOANGA SIBUGAY".split('|');
@@ -746,9 +759,11 @@ function splitAddr(l1,l2){
   return {ss,st,bg,ct:a2,pv,zp};
 }
 function applyDatHeader(p){
-  const ind=!p[3]&&!!(p[4]||p[5]);
   F('tin').value=(p[2]||'').replace(/\D/g,'');
   F('rdo').value=p[18]||'';
+  if(p.br!=null)F('br').value=String(p.br).replace(/\D/g,'').slice(-4).padStart(4,'0');
+  if(p.noNames){syncF();saveF();renderFilerLine();openFiler();return}      // a 1601-EQ file has only the TIN, branch and RDO
+  const ind=!p[3]&&!!(p[4]||p[5]);
   F('cls').value=ind?'Individual':'Non-Individual';
   F('co').value=ind?'':p[3];F('ln').value=p[4]||'';F('fn').value=p[5]||'';F('mn').value=p[6]||'';
   F('tr').value=p[7]||'';
@@ -785,8 +800,10 @@ if(typeof document!=='undefined'&&document.getElementById('datpanel')){
       const p=parseDatHeader(ev.target.result);
       if(!p){msg('That does not look like a BIR DAT file (no header line found).',1);return}
       applyDatHeader(p);
-      if(!$('#pf_name').value.trim())$('#pf_name').value=(p[3]||[p[4],p[5]].filter(Boolean).join(' ')).trim();
-      msg('Loaded the details from '+file.name+(p[19]?' (its period was '+p[19]+')':'')+'. Check the address fields, then click Save to keep them.');
+      if(!p.noNames&&!$('#pf_name').value.trim())$('#pf_name').value=(p[3]||[p[4],p[5]].filter(Boolean).join(' ')).trim();
+      const per=p[19]||p.per;
+      msg('Loaded the details from '+file.name+' (a '+p.kind+' file'+(per?', its period was '+per:'')+').'+
+        (p.noNames?' It only has the TIN, branch and RDO, so the names and address were left as they are.':' Check the address fields, then click Save to keep them.'));
     };
     r.readAsText(file,'latin1');e.target.value='';
   };
@@ -810,7 +827,7 @@ if(typeof document!=='undefined'&&document.getElementById('datpanel')){
     if(!res.recs.length){msg('There are no rows to convert. Check the column choices above.',1);return}
     const f=readFiler();if(f.err){msg(f.err,1);openFiler();return}
     const nb=res.recs.filter(r=>probs(r).length).length;
-    if(nb&&!confirm(nb+' row(s) still have a missing or wrong TIN, name or address. Generate the DAT file anyway?'))return;
+    if(nb&&!confirm(nb+' row(s) still have a missing or wrong TIN (or the filer\'s own TIN), name or address. Generate the DAT file anyway?'))return;
     const txt=buildDat(res.recs,f),name=f.tin+'P'+f.mm+f.yyyy+'.DAT';
     const a=document.createElement('a');
     a.href=URL.createObjectURL(new Blob([txt],{type:'text/plain'}));a.download=name;
@@ -832,8 +849,25 @@ const EQF=[
  {k:'mn',t:'middleName',h:'Middle Name',a:'middleName'},
  {k:'atc',t:'ATC',h:'ATC Code',a:'ATC'},
  {k:'am',t:'income_payment',h:'Total Amount of Purchased (F) = (A+B+C+D+E)',a:'income_payment',p:'totalamountofpurchase'},
- {k:'rt',t:'ewt_rate',h:'EWT Rate',a:'ewt_rate'}
+ {k:'rt',t:'ewt_rate',h:'EWT Rate',a:'ewt_rate'},
+ {k:'due',t:'EWT Due (check only)',h:'EWT Due',a:'tax_amount'}
 ];
+// ---- ATC -> EWT rate in percent (rates are fixed by the ATC) ----
+const ATCRATE={};
+"WC010:10,WC011:15,WC020:10,WC021:15,WC030:10,WC031:15,WC040:10,WC041:15,WC050:10,WC051:15,WC060:10,WC061:15,WC070:10,WC080:10,WC081:15,WC100:5,WC110:5,WC120:2,WC139:10,WC140:15,WC150:15,WC151:10,WC156:0.5,WC157:2,WC158:1,WC160:2,WC515:1,WC516:10,WC535:1,WC540:5,WC610:1,WC630:5,WC632:1,WC640:1,WC650:15,WC651:15,WC660:10,WC661:15,WC662:10,WC663:15,WC670:1,WC672:2,WC680:5,WC690:1,WC710:15,WC720:1,WI010:5,WI011:10,WI020:5,WI021:10,WI030:5,WI031:10,WI040:5,WI041:10,WI050:5,WI051:10,WI060:5,WI061:10,WI070:5,WI071:10,WI080:5,WI081:10,WI090:5,WI091:10,WI100:5,WI120:2,WI130:15,WI139:5,WI140:10,WI141:10,WI142:15,WI150:10,WI151:5,WI152:10,WI153:15,WI156:0.5,WI157:2,WI158:1,WI159:15,WI160:2,WI515:5,WI516:10,WI530:1,WI535:1,WI540:5,WI610:1,WI630:5,WI632:1,WI640:1,WI650:25,WI651:32,WI660:10,WI661:10,WI662:10,WI663:20,WI680:5,WI710:20,WI720:1,WI840:0.5,WC840:0.5,WI850:0.5,WC850:0.5,WIW860:0.5,WI860:0.5,WC860:0.5,II130:0,EI900:0,FP010:0,IC010:0,IC011:0,IC020:0,IC021:0,IC030:0,IC031:0,IC040:0,IC041:0,IC050:0,IC055:0,IC060:0,IC070:0,IC080:0,IC090:0,IC100:0,IC101:0,IC120:0,IC130:0,IC140:0,IC150:0,IC160:0,IC170:0,IC190:0,IC191:0,IC370:0,II010:0,II011:0,II012:0,II013:0,II020:0,II050:0,II051:0,II060:0,II070:0,II080:0,II090:0,II110:0,II120:0,II420:0,MC010:0,MC011:0,MC020:0,MC030:0,MC021:0,MC040:0".split(',').forEach(x=>{const [k,v]=x.split(':');ATCRATE[k]=+v});
+// Rate cell -> whole percent. Decided PER ROW: if the ATC is known, whichever reading (as typed, or x100) matches the ATC table wins;
+// otherwise a value of 0.4 or more is already a percent (whole EWT rates are 0.5 to 32) and a smaller one is a fraction (0.005 to 0.32).
+function eqRate(rv,atc){
+  const T=ATCRATE[atc];
+  if(typeof rv==='number'&&rv>0){
+    const w=r2(rv),f=r2(rv*100);
+    if(T!==undefined){if(Math.abs(w-T)<1e-6)return {rt:w,mode:'whole'};if(Math.abs(f-T)<1e-6)return {rt:f,mode:'frac'}}
+    return rv>=0.4?{rt:w,mode:'whole'}:{rt:f,mode:'frac'};
+  }
+  if(typeof rv==='string'&&rv.trim()!==''){const n=toNum(rv);if(n>0)return {rt:n,mode:'text'}}   // "1%" typed as text = 1
+  if(T!==undefined&&T>0)return {rt:T,mode:'filled'};                                      // blank or 0: take the rate of the ATC
+  return {rt:0,mode:'none'};
+}
 const EQI={};EQF.forEach((f,i)=>EQI[f.k]=i);
 const MON=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
 // -> [month 1-12, year or null]. A real date gives its year; a month name/number has no year.
@@ -869,7 +903,7 @@ function eqRateMode(a,hr,map,fa){
   return pc||(mx>0&&mx<=0.1)?'frac':'pct';
 }
 function eqRecs(a,hr,map,gap,fa){
-  const recs=[],mode=eqRateMode(a,hr,map,fa);
+  const recs=[];
   for(let i=hr+1;i<a.length;i++){
     const row=a[i]||[],g=k=>{const c=map[EQI[k]];return c>=0?row[c]:null};
     const t0=g('tin');let dg=String(t0==null?'':t0).replace(/\D/g,'');
@@ -878,15 +912,23 @@ function eqRecs(a,hr,map,gap,fa){
     const pm=parseMonth(g('mo')),rec={src:i,mo:pm?pm[0]:null,yr:pm?pm[1]:null,br:b?Number(b.slice(-4)):0,
       co:cleanText(g('co')),ln:cleanText(g('ln')),fn:cleanText(g('fn')),mn:cleanText(g('mn')),
       atc:cleanText(g('atc')).replace(/\s/g,'').toUpperCase(),am:toNum(g('am')),
-      rt:typeof rv==='number'?(mode==='frac'?r2(rv*100):r2(rv)):toNum(rv)};   // 0.01 in a % column -> 1; 0.5 stays 0.5
+      rt:0};
+    {const er=eqRate(rv,rec.atc);rec.rt=er.rt;rec.rtm=er.mode}      // 0.01 -> 1, 0.5 stays 0.5, blank -> the ATC's rate
+    {const dv=g('due');rec.due=(dv==null||dv==='')?null:toNum(dv)}
     if(!dg&&!(rec.co||rec.ln||rec.fn)){if(gap&&recs.length)break;continue}
     if(!dg&&/^(grand\s+)?total/i.test(rec.co))continue;
     rec.tin=dg?Number(dg):null;rec.tinOk=dg.length===9;recs.push(rec);
   }
   return recs;
 }
-const eqProbs=r=>{const p=[];if(!r.tinOk)p.push(r.tin==null?'No TIN':'TIN not 9 digits');
-  if(!(r.co||r.ln||r.fn))p.push('No name');if(!r.mo)p.push('No month');if(!r.atc)p.push('No ATC');if(!r.rt)p.push('No EWT rate');return p};
+const eqProbs=r=>{const p=[];if(isSelf(r))p.push(SELFMSG);if(!r.tinOk)p.push(r.tin==null?'No TIN':'TIN not 9 digits');
+  if(!(r.co||r.ln||r.fn))p.push('No name');if(!r.mo)p.push('No month');
+  const T=ATCRATE[r.atc];
+  if(!r.atc)p.push('No ATC');else if(T===undefined)p.push('ATC not in the table');
+  if(!r.rt&&!(T===0))p.push('No EWT rate');
+  else if(T!==undefined&&Math.abs(r.rt-T)>1e-6)p.push('Rate '+r.rt+' but '+r.atc+' is '+T);
+  if(r.due!=null&&r.rt){const tx=r2(r.am*r.rt/100);if(Math.abs(r2(r.due)-tx)>0.011)p.push('Tax '+fmt(tx)+' but the file has '+fmt(r.due))}
+  return p};
 
 // Fill the 1601-EQ .xls template (sheet 1) with the records of ONE month. Keeps its styles and filter buttons.
 function buildEqXls(recs,tplU8){
@@ -953,7 +995,7 @@ function buildEqXls(recs,tplU8){
 }
 
 // ---- 1601-EQ panel (UI) ----
-let eq={aoa:[],hr:-1,map:[],recs:[]};
+let eq={aoa:[],hr:-1,map:[],recs:[]},eqEdits={};
 function eqInit(){
   const s=$('#eqsheet');
   s.innerHTML=wb.SheetNames.map(n=>'<option value="'+esc(n)+'">'+esc(n)+'</option>').join('');
@@ -962,26 +1004,28 @@ function eqInit(){
   s.value=b.n;eqUse(b.n);
 }
 function eqUse(n){
+  eqEdits={};
   eq.aoa=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null});
   eq.fa=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:false,defval:null});   // cell text as shown, to see % formats
   const h=eqHeader(eq.aoa);eq.hr=h.score>=4?h.row:-1;
-  eq.map=eq.hr>=0?eqMap(eq.aoa[eq.hr]):EQF.map(()=>-1);eqRecompute();
+  eq.map=eq.hr>=0?applyPrefs('eq',EQF,eq.aoa[eq.hr],eqMap(eq.aoa[eq.hr])):EQF.map(()=>-1);eqRecompute();
 }
 function eqRecompute(){
   eq.recs=eq.hr>=0?eqRecs(eq.aoa,eq.hr,eq.map,$('#gap').checked,eq.fa):[];
+  eq.recs.forEach(r=>{const e=eqEdits[r.src];if(e){if(e.tin!=null){r.tin=e.tin?Number(e.tin):null;r.tinOk=e.tin.length===9}if(e.atc!=null)r.atc=e.atc;if(e.rt!=null)r.rt=e.rt}});
   const hdr=eq.hr>=0?eq.aoa[eq.hr]:[];
   const opts=hdr.map((h,i)=>h==null||h===''?'':'<option value="'+i+'">'+colLetter(i)+' - '+esc(flat(h))+'</option>').join('');
   $('#eqmap').innerHTML='<tr><th>Template column</th><th>Taken from your file</th></tr>'+EQF.map((f,i)=>'<tr><td>'+f.t+'</td><td><select data-i="'+i+'"><option value="-1">(none)</option>'+opts+'</select></td></tr>').join('')+'<tr><td>tax_amount</td><td style="color:var(--mute)">Calculated: income_payment x ewt_rate / 100</td></tr>';
-  document.querySelectorAll('#eqmap select').forEach(s=>{s.value=String(eq.map[+s.dataset.i]);s.onchange=()=>{eq.map[+s.dataset.i]=+s.value;eqRecompute()}});
+  document.querySelectorAll('#eqmap select').forEach(s=>{s.value=String(eq.map[+s.dataset.i]);s.onchange=()=>{eq.map[+s.dataset.i]=+s.value;savePref('eq',EQF,+s.dataset.i,+s.value,hdr,eqMap(hdr));eqRecompute()}});
   const bad=eq.recs.filter(r=>eqProbs(r).length),by={};
   eq.recs.forEach(r=>{const k=r.mo?String(r.mo).padStart(2,'0'):'none';by[k]=(by[k]||0)+1});
   $('#eqcount').textContent=eq.recs.length?'('+eq.recs.length+' rows)':'';
   $('#eqinfo').innerHTML=eq.hr<0?'<span class="bad">No header row with the 1601-EQ columns (Month, TIN, ATC Code, EWT Rate...) was found on this sheet. Choose another sheet.</span>':
     'Header found on row '+(eq.hr+1)+'. One file is made per month: '+(Object.keys(by).sort().map(k=>(k==='none'?'no month':'month '+k)+' ('+by[k]+')').join(', ')||'no rows')+'.'+
-    (bad.length?' <span class="warn">'+bad.length+' row(s) need attention. See "Needs fixing" below.</span>':'');
+    (bad.length?' <span class="warn">'+bad.length+' row(s) need attention. See "Needs fixing" below.</span>':'')+eqRateNote();
   const C=['mo','tin','br','co','ln','fn','mn','atc','am','rt'];
-  $('#eqprev').innerHTML='<tr>'+EQF.map(f=>'<th>'+f.t+'</th>').join('')+'<th>tax_amount</th></tr>'+eq.recs.slice(0,5).map(r=>'<tr>'+C.map(k=>{
-    if(k==='tin')return '<td'+(r.tinOk?'':' class="bad"')+'>'+(r.tin==null?'':String(r.tin).padStart(9,'0'))+'</td>';
+  $('#eqprev').innerHTML='<tr>'+EQF.filter(f=>f.k!=='due').map(f=>'<th>'+f.t+'</th>').join('')+'<th>tax_amount</th></tr>'+eq.recs.slice(0,5).map(r=>'<tr>'+C.map(k=>{
+    if(k==='tin')return '<td'+(r.tinOk&&!isSelf(r)?'':' class="bad"')+'>'+(r.tin==null?'':String(r.tin).padStart(9,'0'))+'</td>';
     if(k==='br')return '<td>'+String(r.br).padStart(4,'0')+'</td>';
     if(k==='am'||k==='rt')return '<td class="num">'+r[k].toFixed(2)+'</td>';
     return '<td>'+esc(r[k]==null?'':r[k])+'</td>'}).join('')+'<td class="num">'+r2(r.am*r.rt/100).toFixed(2)+'</td></tr>').join('');
@@ -1040,7 +1084,7 @@ function genQap(){
   const ok=eq.recs.filter(r=>r.mo),skipped=eq.recs.length-ok.length;
   if(!ok.length){msg('No row has a readable month, so no DAT file was made.',1);return}
   const bad=ok.filter(r=>eqProbs(r).length).length;
-  if(bad&&!confirm(bad+' row(s) have a missing or wrong TIN, name, ATC or rate. Generate the DAT file anyway?'))return;
+  if(bad&&!confirm(bad+' row(s) have a missing or wrong TIN (or the filer\'s own TIN), name, ATC or rate. Generate the DAT file anyway?'))return;
   const q0=Math.ceil(+f.mm/3),out=ok.filter(r=>(r.yr||Y)!==+f.yyyy||Math.ceil(r.mo/3)!==q0).length;
   if(out&&!confirm(out+' row(s) are for months outside the quarter of the Reporting Period ('+f.mm+'/'+f.yyyy+'). Generate the DAT file anyway?'))return;
   const built=buildQapDat(ok,f,Y),txt=built.txt,name=f.tin+f.br+f.mm+f.yyyy+'1601EQ.DAT';
@@ -1087,7 +1131,7 @@ function saHeader(a){
   return b;
 }
 const SAREQ=['tin','ex','zr','tx'];   // columns the DAT file cannot be made without
-let sa={aoa:[],hr:-1,map:[],recs:[]};
+let sa={aoa:[],hr:-1,map:[],recs:[]},saEdits={};
 function saRecs(a,hr,map,gap){
   const recs=[];
   for(let i=hr+1;i<a.length;i++){
@@ -1105,7 +1149,7 @@ function saRecs(a,hr,map,gap){
   }
   return recs;
 }
-const saProbs=r=>{const p=[];if(!r.tinOk)p.push(r.tin==null?'No TIN':'TIN not 9 digits');if(!(r.co||r.ln||r.fn))p.push('No name');
+const saProbs=r=>{const p=[];if(isSelf(r))p.push(SELFMSG);if(!r.tinOk)p.push(r.tin==null?'No TIN':'TIN not 9 digits');if(!(r.co||r.ln||r.fn))p.push('No name');
   if(Math.abs(r.ts-r2(r.ex+r.zr+r.tx))>0.005)p.push('totalSales is not exempt + zeroRated + taxable');return p};
 const saHas=()=>sa.hr>=0&&sa.recs.length>0;
 function saSummarize(recs){
@@ -1121,12 +1165,14 @@ function saInit(){
   s.value=b.n;saUse(b.n);
 }
 function saUse(n){
+  saEdits={};
   sa.aoa=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null});
   const h=saHeader(sa.aoa);sa.hr=h.ok?h.row:-1;
   sa.map=sa.hr>=0?saMap(sa.aoa[sa.hr]):SAF.map(()=>-1);saRecompute();
 }
 function saRecompute(){
   sa.recs=sa.hr>=0?saRecs(sa.aoa,sa.hr,sa.map,$('#gap').checked):[];
+  sa.recs.forEach(r=>{const e=saEdits[r.src];if(e){r.tin=e.tin?Number(e.tin):null;r.tinOk=e.tin.length===9}});
   const bad=sa.recs.filter(r=>saProbs(r).length).length,miss=sa.hr>=0?SAF.filter((f,i)=>sa.map[i]<0).map(f=>f.t):[];
   $('#sainfo').innerHTML=sa.hr<0?'<span class="bad">No Relief Sales template (client_TIN, exempt, zeroRated, taxableNetofVat...) was found on this sheet. Choose another sheet or load the Relief Sales template.</span>':
     'Relief Sales template found, header on row '+(sa.hr+1)+'. <b>'+sa.recs.length+'</b> rows will be written.'+
@@ -1134,7 +1180,7 @@ function saRecompute(){
     (miss.length?' <span class="warn">Column not found: '+miss.join(', ')+'.</span>':'');
   const C=['tin','co','ln','fn','mn','a1','a2','ex','zr','tx','vr','ov','ts'];
   $('#saprev').innerHTML='<tr>'+SAF.slice(0,13).map(f=>'<th>'+f.t+'</th>').join('')+'</tr>'+sa.recs.slice(0,5).map(r=>'<tr>'+C.map(k=>{
-    if(k==='tin')return '<td'+(r.tinOk?'':' class="bad"')+'>'+(r.tin==null?'':String(r.tin).padStart(9,'0'))+'</td>';
+    if(k==='tin')return '<td'+(r.tinOk&&!isSelf(r)?'':' class="bad"')+'>'+(r.tin==null?'':String(r.tin).padStart(9,'0'))+'</td>';
     return ['ex','zr','tx','vr','ov','ts'].includes(k)?'<td class="num">'+r[k].toFixed(2)+'</td>':'<td>'+esc(r[k])+'</td>'}).join('')+'</tr>').join('');
   renderCards();
 }
@@ -1147,10 +1193,11 @@ function renderSaCards(){
   const bad=has?sa.recs.filter(r=>saProbs(r).length):[],box=$('#safixbox');
   $('#safixcount').textContent=bad.length?'('+bad.length+')':'(none)';
   box.open=bad.length>0;box.classList.toggle('has',bad.length>0);
+  if(_fixLock)return;
   let h='<tr><th>File row</th><th>Problem</th><th>TIN</th><th>Name</th><th>Exempt</th><th>Zero rated</th><th>Taxable</th><th>Total sales</th></tr>';
   if(!bad.length)h+='<tr><td colspan="8" style="color:var(--mute)">Nothing to fix.</td></tr>';
   bad.slice(0,200).forEach(r=>{
-    h+='<tr><td>'+(r.src+1)+'</td><td class="bad">'+esc(saProbs(r).join(', '))+'</td><td>'+(r.tin==null?'':String(r.tin).padStart(9,'0'))+'</td><td>'+
+    h+='<tr><td>'+(r.src+1)+'</td><td class="bad" id="sast_'+r.src+'">'+esc(saProbs(r).join(', '))+'</td><td>'+tinBox('sa',r)+'</td><td>'+
       esc(r.co||[r.ln,r.fn].filter(Boolean).join(' '))+'</td><td class="num">'+fmt(r.ex)+'</td><td class="num">'+fmt(r.zr)+'</td><td class="num">'+fmt(r.tx)+'</td><td class="num">'+fmt(r.ts)+'</td></tr>';
   });
   if(bad.length>200)h+='<tr><td colspan="8" style="color:var(--mute)">Showing the first 200 of '+bad.length+' rows.</td></tr>';
@@ -1214,6 +1261,114 @@ function genSales(){
 }
 </script>
 <script>
+// ---- Remembered column choices ----
+// When you change a "Taken from your file" dropdown, the choice is remembered (by the column's header text)
+// and applied the next time a file with that header is loaded. "Forget" puts the automatic choice back.
+const MPK='reliefMapPrefs';
+const mpGet=()=>{try{return JSON.parse(localStorage.getItem(MPK)||'{}')}catch(e){return {}}};
+const mpSet=o=>{try{localStorage.setItem(MPK,JSON.stringify(o))}catch(e){}};
+function applyPrefs(scope,flds,hdrRow,auto){
+  const p=mpGet()[scope]||{},h=(hdrRow||[]).map(norm),out=auto.slice();
+  flds.forEach((f,i)=>{
+    if(!(f.k in p))return;
+    if(p[f.k]==='')out[i]=-1;                       // remembered "(none)"
+    else{const j=h.lastIndexOf(p[f.k]);if(j>=0)out[i]=j}   // header not in this file: keep the automatic choice
+  });
+  prefNote();
+  return out;
+}
+function savePref(scope,flds,i,col,hdrRow,auto){
+  const all=mpGet(),p=all[scope]=all[scope]||{},k=flds[i].k,v=col<0?'':norm(hdrRow[col]);
+  if(col===auto[i]||(col>=0&&!v))delete p[k];       // same as automatic (or a header with no text): nothing to remember
+  else p[k]=v;
+  mpSet(all);prefNote();
+}
+function prefNote(){
+  const all=mpGet();
+  [['#map',()=>(typeof tmpl!=='undefined'&&tmpl)?'relt':'relg',()=>useSheet($('#sheet').value)],
+   ['#eqmap',()=>'eq',()=>eqUse($('#eqsheet').value)]].forEach(([sel,sc,redo])=>{
+    const t=$(sel);if(!t)return;
+    const host=t.parentElement&&t.parentElement.classList.contains('scroll')?t.parentElement:t;
+    let n=host.nextElementSibling;
+    if(!n||!n.classList.contains('prefnote')){n=document.createElement('div');n.className='prefnote';host.after(n)}
+    const c=Object.keys(all[sc()]||{}).length;
+    n.hidden=!c;
+    n.innerHTML=c?c+' remembered column choice'+(c>1?'s are':' is')+' applied to this kind of file. <button type="button">Forget</button>':'';
+    const b=n.querySelector('button');
+    if(b)b.onclick=()=>{const a=mpGet();delete a[sc()];mpSet(a);redo()};
+  });
+}
+// ---- Reporting Period default: last month-end for Relief, last finished quarter-end for QAP 1601EQ ----
+let perTouched=false;
+function periodDefault(){
+  if(perTouched)return;
+  const d=new Date();let m=d.getMonth();
+  if($('#f_rt').value==='QAP 1601EQ')m=Math.floor(m/3)*3;
+  const e=new Date(d.getFullYear(),m,0);
+  $('#f_per').value=e.getFullYear()+'-'+String(e.getMonth()+1).padStart(2,'0')+'-'+String(e.getDate()).padStart(2,'0');
+}
+$('#f_per').addEventListener('input',()=>{perTouched=true});
+// ---- Transactions are the editable side: fix a row's TIN right in the "Needs fixing" list (the filer TIN stays as it is) ----
+let _fixLock=false;
+const tinBox=(k,r)=>'<input class="tinfix" data-k="'+k+'" data-src="'+r.src+'" inputmode="numeric" maxlength="11" aria-label="TIN of file row '+(r.src+1)+'" value="'+(r.tin==null?'':String(r.tin).padStart(9,'0'))+'">';
+function onFixTin(kind,e){
+  const t=e.target;if(!t.classList||!t.classList.contains('tinfix')||!t.dataset.k||!t.isConnected)return;   // only the TIN boxes (data-k), not the ATC / rate boxes
+  const L=kind==='eq'?eq:sa,ED=kind==='eq'?eqEdits:saEdits,pf=kind==='eq'?eqProbs:saProbs;
+  const src=+t.dataset.src,r=L.recs.find(x=>x.src===src);if(!r)return;
+  const d=t.value.replace(/\D/g,'');t.value=d;
+  (ED[src]=ED[src]||{}).tin=d;
+  r.tin=d?Number(d):null;r.tinOk=d.length===9;
+  const p=pf(r),c=document.getElementById(kind+'st_'+src);
+  if(c){c.textContent=p.length?p.join(', '):'OK';c.className=p.length?'bad':'okc'}
+  _fixLock=true;try{renderCards()}finally{_fixLock=false}
+}
+$('#eqfix').addEventListener('change',e=>onFixTin('eq',e));
+$('#safix').addEventListener('change',e=>onFixTin('sa',e));
+// ---- 1601-EQ: how the rates were read + fixing ATC / rate in the "Needs fixing" list ----
+function eqRateNote(){
+  const c={};eq.recs.forEach(r=>{c[r.rtm]=(c[r.rtm]||0)+1});
+  const parts=[];
+  if(c.frac)parts.push(c.frac+' as fractions (0.01 becomes 1)');
+  if(c.whole)parts.push(c.whole+' as whole percents');
+  if(c.text)parts.push(c.text+' typed with %');
+  if(c.filled)parts.push(c.filled+' blank, taken from the ATC table');
+  return parts.length?' EWT rates read: '+parts.join(', ')+'.':'';
+}
+const eqBox=(r,k,v,w)=>'<input class="tinfix" data-eqk="'+k+'" data-src="'+r.src+'" style="min-width:'+w+'px" value="'+esc(v)+'" aria-label="'+k+' of file row '+(r.src+1)+'">';
+function onFixEq(e){
+  const t=e.target;if(!t.dataset||!t.dataset.eqk||!t.isConnected)return;
+  const src=+t.dataset.src,k=t.dataset.eqk,r=eq.recs.find(x=>x.src===src);if(!r)return;
+  const ed=eqEdits[src]=eqEdits[src]||{};
+  if(k==='atc'){const v=cleanText(t.value).replace(/\s/g,'').toUpperCase();t.value=v;r.atc=ed.atc=v;
+    const T=ATCRATE[v];if(T!==undefined&&!r.rt){r.rt=ed.rt=T}}            // a blank rate follows the new ATC
+  else{const v=toNum(t.value);t.value=v.toFixed(2);r.rt=ed.rt=v}
+  const p=eqProbs(r),c=document.getElementById('eqst_'+src);
+  if(c){c.textContent=p.length?p.join(', '):'OK';c.className=p.length?'bad':'okc'}
+  _fixLock=true;try{renderCards()}finally{_fixLock=false}
+}
+$('#eqfix').addEventListener('change',onFixEq);
+(function(){
+  const host=$('#eqfix').parentElement,d=document.createElement('div');
+  d.className='note';d.hidden=true;d.innerHTML='<button type="button" id="eqfixrate">Use the ATC table rate for the rows with a wrong rate</button>';
+  host.after(d);
+  $('#eqfixrate').onclick=()=>{
+    eq.recs.forEach(r=>{const T=ATCRATE[r.atc];if(T!==undefined&&r.rt&&Math.abs(r.rt-T)>1e-6){r.rt=T;(eqEdits[r.src]=eqEdits[r.src]||{}).rt=T}});
+    renderCards();
+  };
+  window.eqRateBtn=()=>{d.hidden=!eq.recs.some(r=>{const T=ATCRATE[r.atc];return T!==undefined&&r.rt&&Math.abs(r.rt-T)>1e-6})};
+})();
+// ---- The filer's own TIN must not appear in the transactions (flagged red like any other problem) ----
+const SELFMSG="Same as the filer's TIN: correct it here";
+function filerTinDigits(){const el=document.getElementById('f_tin'),d=el?el.value.replace(/\D/g,''):'';return d.length===9?d:''}
+function isSelf(r){const t=filerTinDigits();return !!t&&r.tin!=null&&String(r.tin).padStart(9,'0')===t}
+let _lastFT='',_selfT;
+function checkSelf(){
+  const t=filerTinDigits();if(t===_lastFT)return;_lastFT=t;
+  clearTimeout(_selfT);
+  _selfT=setTimeout(()=>{if(typeof wb==='undefined'||!wb)return;try{recompute()}catch(e){}try{eqRecompute()}catch(e){}try{saRecompute()}catch(e){}},120);
+}
+$('#f_tin').addEventListener('input',checkSelf);
+setInterval(checkSelf,400);      // also catches a TIN filled in by a saved profile or an old DAT file
 // ---- Layout: tabs, totals cards, filer details line, export bar ----
 let tab='rel';
 const MONS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -1225,7 +1380,7 @@ function setTab(t,focus){
   const multi=!!wb&&wb.SheetNames.length>1;
   $('#sheet').hidden=!(t==='rel'&&multi);$('#eqsheet').hidden=!(t==='eq'&&multi);$('#sasheet').hidden=!(t==='sa'&&multi);
   $('#dl').hidden=t!=='rel';$('#dleq').hidden=t!=='eq';$('#dlsa').hidden=t!=='sa';
-  $('#f_rt').value=t==='eq'?'QAP 1601EQ':t==='sa'?'RELIEF Sales':'RELIEF Purchases';      // the DAT button follows the open tab
+  $('#f_rt').value=t==='eq'?'QAP 1601EQ':t==='sa'?'RELIEF Sales':'RELIEF Purchases';periodDefault();      // the DAT button follows the open tab
 }
 // Relief and 1601-EQ sheets share column names (TIN, names...), so a tab only counts as "having data"
 // when its own columns are there: Relief amounts, or 1601-EQ month / ATC / rate values.
@@ -1257,11 +1412,13 @@ function renderEqFix(){
   const bad=eqHas()?eq.recs.filter(r=>eqProbs(r).length):[],box=$('#eqfixbox');
   $('#eqfixcount').textContent=bad.length?'('+bad.length+')':'(none)';
   box.open=bad.length>0;box.classList.toggle('has',bad.length>0);
+  if(window.eqRateBtn)eqRateBtn();
+  if(_fixLock)return;
   let h='<tr><th>File row</th><th>Problem</th><th>TIN</th><th>Name</th><th>Month</th><th>ATC</th><th>Amount</th><th>EWT rate</th></tr>';
   if(!bad.length)h+='<tr><td colspan="8" style="color:var(--mute)">Nothing to fix.</td></tr>';
   bad.slice(0,200).forEach(r=>{
-    h+='<tr><td>'+(r.src+1)+'</td><td class="bad">'+esc(eqProbs(r).join(', '))+'</td><td>'+(r.tin==null?'':String(r.tin).padStart(9,'0'))+'</td><td>'+
-      esc(r.co||[r.ln,r.fn].filter(Boolean).join(' '))+'</td><td>'+(r.mo?String(r.mo).padStart(2,'0')+(r.yr?'/'+r.yr:''):'')+'</td><td>'+esc(r.atc)+'</td><td class="num">'+fmt(r.am)+'</td><td class="num">'+r.rt.toFixed(2)+'</td></tr>';
+    h+='<tr><td>'+(r.src+1)+'</td><td class="bad" id="eqst_'+r.src+'">'+esc(eqProbs(r).join(', '))+'</td><td>'+tinBox('eq',r)+'</td><td>'+
+      esc(r.co||[r.ln,r.fn].filter(Boolean).join(' '))+'</td><td>'+(r.mo?String(r.mo).padStart(2,'0')+(r.yr?'/'+r.yr:''):'')+'</td><td>'+eqBox(r,'atc',r.atc,84)+'</td><td class="num">'+fmt(r.am)+'</td><td>'+eqBox(r,'rt',r.rt.toFixed(2),64)+'</td></tr>';
   });
   if(bad.length>200)h+='<tr><td colspan="8" style="color:var(--mute)">Showing the first 200 of '+bad.length+' rows.</td></tr>';
   $('#eqfix').innerHTML=h;
