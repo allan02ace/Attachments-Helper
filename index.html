@@ -171,6 +171,14 @@ dialog#perdlg::backdrop{background:rgba(0,0,0,.5)}
 #perdlg .perbig{margin:0;padding:2px 18px 4px;font-size:32px;font-weight:800;letter-spacing:-.01em}
 #perdlg .pers{margin:0;padding:0 18px 16px;color:var(--mute);font-size:13px}
 #perdlg .peract{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;padding:10px 14px;border-top:1px solid var(--line)}
+
+#sumtbl{padding:10px 18px 16px;overflow:auto;max-height:62vh}
+#sumtbl table{border-collapse:collapse;font-variant-numeric:tabular-nums}
+#sumtbl th,#sumtbl td{padding:5px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+#sumtbl th{background:var(--head);position:sticky;top:0}
+#sumtbl td:first-child,#sumtbl th:first-child{text-align:left}
+#sumtbl .tot{border-left:2px solid var(--line);font-weight:700}
+#sumtbl p{margin:10px 0 0;color:var(--mute);font-size:13px}
 </style>
 </head>
 <body>
@@ -238,6 +246,7 @@ dialog#perdlg::backdrop{background:rgba(0,0,0,.5)}
  <section id="tab_rel" role="tabpanel" aria-labelledby="t_rel">
   <div class="cardbar"><div class="cards" id="cards_rel"></div><button id="showsum" type="button">Full summary</button></div>
   <div class="status" id="info"></div>
+  <div class="status" id="moinfo" hidden></div>
   <details class="sec" id="fixbox"><summary>Needs fixing <span id="fixcount" class="cnt"></span></summary><div class="in">
    <div class="note"><label><input type="checkbox" id="fixall"> Show all rows</label>
     <span style="color:var(--mute)"> Fix a blank or wrong TIN, name or address here. Changes are used in both the .xls and the DAT file.</span></div>
@@ -279,10 +288,12 @@ dialog#perdlg::backdrop{background:rgba(0,0,0,.5)}
    </div>
    <div class="xbtns">
     <button id="dl" class="primary" type="button">Download .xls</button>
+     <button id="dlm" type="button" hidden title="Splits the sheet by its Month column and makes one .xls file for each month">Download .xls per month</button>
     <button id="dleq" class="primary" type="button" hidden title="One file is made for each month">Download .xls</button>
     <button id="g2307" class="primary" type="button" hidden title="Make BIR Form 2307 certificates for the payees you choose (PDF)">Generate 2307</button>
     <button id="dlsa" class="primary" type="button" hidden title="Saves the Relief Sales rows as an .xls file">Download .xls</button>
      <button id="gen" type="button">Generate DAT file</button>
+     <button id="genm" type="button" hidden title="Splits the sheet by its Month column and makes one DAT file for each month">Generate DAT per month</button>
    </div>
   </div>
  </div>
@@ -298,6 +309,7 @@ dialog#perdlg::backdrop{background:rgba(0,0,0,.5)}
  <h2 id="sumttl">Summary</h2>
  <p class="sub2" id="sumsub"></p>
  <pre id="sumtxt"></pre>
+ <div id="sumtbl" hidden></div>
  <form method="dialog" class="act"><button class="primary" autofocus>OK</button></form>
 </dialog>
 <dialog id="perdlg" aria-labelledby="perdlg_h">
@@ -355,7 +367,7 @@ const TFIELDS=[
  {k:'iv',t:'inputVat (optional)',h:'inputVat',num:1}
 ];
 const TEXT_KEYS=['co','ln','fn','mn','a1','a2'];
-const norm=s=>String(s==null?'':s).toLowerCase().replace(/[^a-z0-9]/g,'');
+const norm=s=>String(s==null?'':s).toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9]/g,'');   // "&" and "AND" headers match
 const flat=s=>String(s==null?'':s).replace(/\s+/g,' ').trim();
 const colLetter=n=>{let s='';n++;while(n>0){const m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=Math.floor((n-1)/26)}return s};
 const r2=n=>Math.round((n+Number.EPSILON)*100)/100;
@@ -601,7 +613,7 @@ function recompute(){
   res=hr>=0?buildRecords(aoa,hr,map,$('#gap').checked,fields):{recs:[],badTin:0};
   res.recs.forEach(r=>{if(edits[r.src])applyEdit(r,edits[r.src])});
   res.badTin=res.recs.filter(r=>!r.tinOk).length;
-  renderMap();renderPrev();renderFix();info();renderCards();
+  renderMap();renderPrev();renderFix();info();renderCards();if(window.monthUI)monthUI();
 }
 function renderFix(){
   const all=$('#fixall').checked;
@@ -687,6 +699,7 @@ function showSummary(){
     'Total Input Non-Creditable : '+fmt(s.non),
     'Total Input Creditable : '+fmt(s.cred)
   ].join('\n');
+  if(window.monthSummary)monthSummary();      // a sheet with several months: one column per month
   const d=$('#sum');if(!d.open)d.showModal();
 }
 $('#showsum').onclick=()=>{if(res.recs.length)showSummary();else msg('There are no rows to summarize. Check the column choices above.',1)};
@@ -1053,7 +1066,7 @@ function eqUse(n){
 function eqRecompute(){
   eq.recs=eq.hr>=0?eqRecs(eq.aoa,eq.hr,eq.map,$('#gap').checked,eq.fa):[];
   if(eqDeleted.size)eq.recs=eq.recs.filter(r=>!eqDeleted.has(r.src));      // rows the user deleted from the Needs fixing list
-  eq.recs.forEach(r=>{const e=eqEdits[r.src];if(e){if(e.tin!=null){r.tin=e.tin?Number(e.tin):null;r.tinOk=e.tin.length===9}if(e.atc!=null)r.atc=e.atc;if(e.rt!=null)r.rt=e.rt}});
+  eq.recs.forEach(r=>{const e=eqEdits[r.src];if(e){if(e.tin!=null){r.tin=e.tin?Number(e.tin):null;r.tinOk=e.tin.length===9}if(e.atc!=null)r.atc=e.atc;if(e.rt!=null)r.rt=e.rt;if(e.mo!==undefined){r.mo=e.mo;if(e.mo)r.yr=e.yr||r.yr}}});
   const hdr=eq.hr>=0?eq.aoa[eq.hr]:[];
   const opts=hdr.map((h,i)=>h==null||h===''?'':'<option value="'+i+'">'+colLetter(i)+' - '+esc(flat(h))+'</option>').join('');
   $('#eqmap').innerHTML='<tr><th>Template column</th><th>Taken from your file</th></tr>'+EQF.map((f,i)=>'<tr><td>'+f.t+'</td><td><select data-i="'+i+'"><option value="-1">(none)</option>'+opts+'</select></td></tr>').join('')+'<tr><td>tax_amount</td><td style="color:var(--mute)">Calculated: income_payment x ewt_rate / 100</td></tr>';
@@ -1191,7 +1204,7 @@ function saRecs(a,hr,map,gap){
   return recs;
 }
 const saProbs=r=>{const p=[];if(isSelf(r))p.push(SELFMSG);if(!r.tinOk)p.push(r.tin==null?'No TIN':'TIN not 9 digits');if(!(r.co||r.ln||r.fn))p.push('No name');
-  if(Math.abs(r.ts-r2(r.ex+r.zr+r.tx))>0.005)p.push('totalSales is not exempt + zeroRated + taxable');return p};
+  if(Math.abs(r.ts-r2(r.ex+r.zr+r.tx))>0.015)p.push('totalSales is not exempt + zeroRated + taxable');return p};
 const saHas=()=>sa.hr>=0&&sa.recs.length>0;
 function saSummarize(recs){
   let ex=0,zr=0,tx=0,ov=0,ts=0;
@@ -1388,7 +1401,8 @@ function onFixEq(e){
   const t=e.target;if(!t.dataset||!t.dataset.eqk||!t.isConnected)return;
   const src=+t.dataset.src,k=t.dataset.eqk,r=eq.recs.find(x=>x.src===src);if(!r)return;
   const ed=eqEdits[src]=eqEdits[src]||{};
-  if(k==='atc'){const v=cleanText(t.value).replace(/\s/g,'').toUpperCase();t.value=v;r.atc=ed.atc=v;
+  if(k==='mo'){const pm=parseMonth(t.value.trim()||null);ed.mo=pm?pm[0]:null;ed.yr=pm?pm[1]:null;r.mo=ed.mo;if(pm&&pm[1])r.yr=pm[1];t.value=pm?String(pm[0]).padStart(2,'0'):''}
+  else if(k==='atc'){const v=cleanText(t.value).replace(/\s/g,'').toUpperCase();t.value=v;r.atc=ed.atc=v;
     const T=ATCRATE[v];if(T!==undefined&&!r.rt){r.rt=ed.rt=T}}            // a blank rate follows the new ATC
   else{const v=toNum(t.value);t.value=v.toFixed(2);r.rt=ed.rt=v}
   const p=eqProbs(r),c=document.getElementById('eqst_'+src);
@@ -1448,6 +1462,7 @@ function setTab(t,focus){
   $('#sheet').hidden=!(t==='rel'&&multi);$('#eqsheet').hidden=!(t==='eq'&&multi);$('#sasheet').hidden=!(t==='sa'&&multi);
   $('#dl').hidden=t!=='rel';$('#dleq').hidden=t!=='eq';$('#g2307').hidden=t!=='eq';$('#dlsa').hidden=t!=='sa';
   $('#f_rt').value=t==='eq'?'QAP 1601EQ':t==='sa'?'RELIEF Sales':'RELIEF Purchases';periodDefault();      // the DAT button follows the open tab
+  if(window.monthUI)monthUI();
 }
 // Relief and 1601-EQ sheets share column names (TIN, names...), so a tab only counts as "having data"
 // when its own columns are there: Relief amounts, or 1601-EQ month / ATC / rate values.
@@ -1485,7 +1500,7 @@ function renderEqFix(){
   if(!bad.length)h+='<tr><td colspan="9" style="color:var(--mute)">Nothing to fix.</td></tr>';
   bad.slice(0,200).forEach(r=>{
     h+='<tr><td>'+(r.src+1)+'</td><td class="bad" id="eqst_'+r.src+'">'+esc(eqProbs(r).join(', '))+'</td><td>'+tinBox('eq',r)+'</td><td>'+
-      esc(r.co||[r.ln,r.fn].filter(Boolean).join(' '))+'</td><td>'+(r.mo?String(r.mo).padStart(2,'0')+(r.yr?'/'+r.yr:''):'')+'</td><td>'+eqBox(r,'atc',r.atc,84)+'</td><td class="num">'+fmt(r.am)+'</td><td>'+eqBox(r,'rt',r.rt.toFixed(2),64)+'</td><td><button type="button" class="eqdel" data-del="'+r.src+'" title="Remove this transaction from the 1601-EQ" aria-label="Delete file row '+(r.src+1)+'">Delete</button></td></tr>';
+      esc(r.co||[r.ln,r.fn].filter(Boolean).join(' '))+'</td><td>'+((!r.mo||(eqEdits[r.src]&&eqEdits[r.src].mo!==undefined))?eqBox(r,'mo',r.mo?String(r.mo).padStart(2,'0'):'',56)+'':(String(r.mo).padStart(2,'0')+(r.yr?'/'+r.yr:'')))+'</td><td>'+eqBox(r,'atc',r.atc,84)+'</td><td class="num">'+fmt(r.am)+'</td><td>'+eqBox(r,'rt',r.rt.toFixed(2),64)+'</td><td><button type="button" class="eqdel" data-del="'+r.src+'" title="Remove this transaction from the 1601-EQ" aria-label="Delete file row '+(r.src+1)+'">Delete</button></td></tr>';
   });
   if(bad.length>200)h+='<tr><td colspan="9" style="color:var(--mute)">Showing the first 200 of '+bad.length+' rows.</td></tr>';
   $('#eqfix').innerHTML=h;
@@ -1799,6 +1814,109 @@ $('#perdlg').addEventListener('close',()=>{
   else if(v==='change'){const f=$('#f_per_m');f.focus();try{if(f.showPicker)f.showPicker()}catch(e){}}
 });
 perUI();
+</script>
+<script>
+// ---- One DAT file per month (Relief Purchases) ----
+// A workbook that holds several months is split by its Month column (JULY, AUGUST, SEPTEMBER ...), one DAT file per month.
+// The Month column is the period the purchase is booked in, so it wins over the Date column (an invoice dated in June can be booked in July).
+// Without a Month column the Date column is used. The year of a month comes from the dates of that month's rows (the most common year),
+// so one mistyped date (for example 2006) does not make a file of its own. Every file has its own period-end date in the header and the detail lines.
+function moSplit(aoa,hr,recs,fallbackYear){
+  const out={months:[],skipped:0};
+  if(hr<0||!recs.length)return out;
+  const h=(aoa[hr]||[]).map(norm),cm=h.indexOf('month'),cd=h.indexOf('date');
+  if(cm<0&&cd<0)return out;
+  const items=recs.map(r=>{
+    const row=aoa[r.src]||[],mv=cm>=0?parseMonth(row[cm]):null,dv=cd>=0?parseMonth(row[cd]):null;
+    return {r,m:mv?mv[0]:(dv?dv[0]:0),y:mv&&mv[1]?mv[1]:null,dy:dv?dv[1]:null,viaMonth:!!mv};
+  });
+  const modeYear=m=>{
+    const c=new Map();let best=null,n=0;
+    items.forEach(it=>{if(it.m===m&&it.viaMonth){const y=it.y||it.dy;if(y)c.set(y,(c.get(y)||0)+1)}});
+    c.forEach((v,y)=>{if(v>n){n=v;best=y}});
+    return best;
+  };
+  const yearOf={},by=new Map();
+  items.forEach(it=>{
+    if(!it.m){out.skipped++;return}
+    let y;
+    if(it.viaMonth){
+      if(!(it.m in yearOf))yearOf[it.m]=modeYear(it.m)||fallbackYear;
+      y=it.y||yearOf[it.m];
+    }else y=it.dy||fallbackYear;
+    const k=y*100+it.m;
+    if(!by.has(k))by.set(k,{k,m:it.m,y,recs:[]});
+    by.get(k).recs.push(it.r);
+  });
+  out.months=[...by.values()].sort((a,b)=>a.k-b.k);
+  return out;
+}
+function moNow(){return moSplit(aoa,hr,res.recs,+perMY()[1])}
+window.monthUI=function(){
+  const box=$('#moinfo'),btn=$('#genm');
+  const sp=(typeof tab!=='undefined'&&tab==='rel'&&hr>=0)?moNow():{months:[],skipped:0};
+  const on=sp.months.length>=2;
+  btn.hidden=!on;box.hidden=!on;$('#dlm').hidden=!on;
+  if(!on){box.textContent='';return}
+  btn.textContent='Generate '+sp.months.length+' DAT files (one per month)';
+  $('#dlm').textContent='Download '+sp.months.length+' .xls files (one per month)';
+  box.innerHTML='This sheet covers <b>'+sp.months.length+' months</b>: '+
+    sp.months.map(x=>'<b>'+PER_LONG[x.m-1]+' '+x.y+'</b> ('+x.recs.length+' rows)').join(', ')+'. The per-month buttons make one file for each month, and \u201cFull summary\u201d shows the totals of each month.'+
+    (sp.skipped?' <span class="warn">'+sp.skipped+' row(s) have no readable month and are left out.</span>':'');
+};
+$('#genm').onclick=()=>{
+  const sp=moNow();
+  if(!sp.months.length){msg('No row has a readable month, so no DAT files were made.',1);return}
+  const f=readFiler();if(f.err){msg(f.err,1);openFiler();return}
+  const nb=sp.months.reduce((n,x)=>n+x.recs.filter(r=>probs(r).length).length,0);
+  if(nb&&!confirm(nb+' row(s) still have a missing or wrong TIN (or the filer\'s own TIN), name or address. Generate the DAT files anyway?'))return;
+  const files=sp.months.map(x=>{
+    const mm=String(x.m).padStart(2,'0'),yyyy=String(x.y),dd=String(new Date(Date.UTC(x.y,x.m,0)).getUTCDate()).padStart(2,'0');
+    const fm=Object.assign({},f,{mm,yyyy,date:mm+'/'+dd+'/'+yyyy});
+    return {txt:buildDat(x.recs,fm),name:f.tin+'P'+mm+yyyy+'.DAT',n:x.recs.length,label:PER_LONG[x.m-1]+' '+x.y};
+  });
+  files.forEach((x,i)=>setTimeout(()=>{
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([x.txt],{type:'text/plain'}));a.download=x.name;
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  },i*400));
+  msg('Downloading '+files.length+' DAT files, one per month: '+files.map(x=>x.name+' ('+x.label+', '+x.n+' detail lines)').join('; ')+'.'+
+    (sp.skipped?' '+sp.skipped+' row(s) without a month were left out.':'')+' If your browser asks, allow multiple downloads.');
+};
+// ---- Per month: .xls files and the summary (same split as the DAT files above) ----
+// One .xls (Relief Purchases template) for each month: <filer>_SLP_<MMYYYY>.xls
+$('#dlm').onclick=()=>{
+  const sp=moNow();
+  if(!sp.months.length){msg('No row has a readable month, so no .xls files were made.',1);return}
+  try{
+    msg('Creating files...');
+    const files=sp.months.map(x=>{
+      const mm=String(x.m).padStart(2,'0');
+      return {buf:buildXls(x.recs,b64ToU8(TPL)),name:outName('SLP',mm,String(x.y)),n:x.recs.length,label:PER_LONG[x.m-1]+' '+x.y};
+    });
+    files.forEach((x,i)=>setTimeout(()=>saveXls(x.buf,x.name),i*400));
+    msg('Downloading '+files.length+' .xls files, one per month: '+files.map(x=>x.name+' ('+x.label+', '+x.n+' rows)').join('; ')+'.'+
+      (sp.skipped?' '+sp.skipped+' row(s) without a month were left out.':'')+' If your browser asks, allow multiple downloads.');
+  }catch(err){msg('Could not create the files: '+(err&&err.message||err),1)}
+};
+// Full summary: with 2 or more months the pop-up shows one column per month and a Total column
+window.monthSummary=function(){
+  const tbl=$('#sumtbl'),txt=$('#sumtxt'),sp=moNow();
+  if(sp.months.length<2){tbl.hidden=true;txt.hidden=false;return}
+  const S=sp.months.map(x=>summarize(x.recs)),T=summarize(sp.months.flatMap(x=>x.recs));
+  const M=[['Total Exempt','ex'],['Total Zero Rated','zr'],['Total Services','sv'],['Total Capital Goods','cg'],
+    ['Total Other than Capital Goods','og'],['Total Input Vat','vat'],['Total Input Non-Creditable','non'],['Total Input Creditable','cred']];
+  let h='<table><tr><th></th>'+sp.months.map(x=>'<th class="num">'+PER_LONG[x.m-1]+' '+x.y+'</th>').join('')+'<th class="num tot">Total</th></tr>';
+  h+='<tr><td>Rows</td>'+sp.months.map(x=>'<td class="num">'+x.recs.length+'</td>').join('')+'<td class="num tot">'+sp.months.reduce((n,x)=>n+x.recs.length,0)+'</td></tr>';
+  M.forEach(([l,k])=>{h+='<tr><td>'+l+'</td>'+S.map(v=>'<td class="num">'+fmt(v[k])+'</td>').join('')+'<td class="num tot">'+fmt(T[k])+'</td></tr>'});
+  h+='</table>';
+  if(sp.skipped)h+='<p class="warn">'+sp.skipped+' row(s) have no readable month and are not counted above.</p>';
+  tbl.innerHTML=h;tbl.hidden=false;txt.hidden=true;
+  $('#sumttl').textContent='Summary per month';
+  $('#sumsub').textContent=fname+' \u00b7 '+sp.months.length+' months';
+};
+$('#sum').addEventListener('close',()=>{$('#sumtbl').hidden=true;$('#sumtxt').hidden=false});   // the next summary (any kind) starts as plain text
+if(window.monthUI)monthUI();
 </script>
 <script src="firebase-config.js"></script>
 <script src="cloud.js"></script>
