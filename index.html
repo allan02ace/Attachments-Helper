@@ -249,7 +249,7 @@ dialog#perdlg::backdrop{background:rgba(0,0,0,.5)}
   <div class="status" id="moinfo" hidden></div>
   <details class="sec" id="fixbox"><summary>Needs fixing <span id="fixcount" class="cnt"></span></summary><div class="in">
    <div class="note"><label><input type="checkbox" id="fixall"> Show all rows</label>
-    <span style="color:var(--mute)"> Fix a blank or wrong TIN, name or address here. Changes are used in both the .xls and the DAT file.</span></div>
+    <span style="color:var(--mute)"> Fix a blank or wrong TIN, name or address here. Changes are used in both the .xls and the DAT file.</span> <button type="button" class="tin9" data-kind="p" title="Pad short TINs with leading zeros and cut long TINs to the first 9 digits">Force TIN to 9 digits</button></div>
    <div class="scroll"><table id="fix"></table></div></div></details>
   <details class="sec"><summary>Preview (first 5 rows)</summary><div class="in scroll"><table id="prev"></table></div></details>
   <details class="sec"><summary>Advanced: column mapping</summary><div class="in scroll"><table id="map"></table></div></details>
@@ -259,7 +259,7 @@ dialog#perdlg::backdrop{background:rgba(0,0,0,.5)}
   <div class="cardbar"><div class="cards" id="cards_eq"></div><button id="eqsumbtn" type="button">Full summary</button></div>
   <div class="status" id="eqinfo"></div>
   <details class="sec" id="eqfixbox"><summary>Needs fixing <span id="eqfixcount" class="cnt"></span></summary><div class="in">
-   <div class="note" style="color:var(--mute)">Fix these in your file and load it again.</div>
+   <div class="note" style="color:var(--mute)">Fix these in your file and load it again, or fix the TINs here. <button type="button" class="tin9" data-kind="eq" title="Pad short TINs with leading zeros and cut long TINs to the first 9 digits">Force TIN to 9 digits</button></div>
    <div class="scroll"><table id="eqfix"></table></div></div></details>
   <details class="sec"><summary>Preview (first 5 rows)</summary><div class="in scroll"><table id="eqprev"></table></div></details>
   <details class="sec"><summary>Advanced: column mapping</summary><div class="in">
@@ -272,7 +272,7 @@ dialog#perdlg::backdrop{background:rgba(0,0,0,.5)}
    <div class="cardbar"><div class="cards" id="cards_sa"></div><button id="sasumbtn" type="button">Full summary</button></div>
    <div class="status" id="sainfo"></div>
    <details class="sec" id="safixbox"><summary>Needs fixing <span id="safixcount" class="cnt"></span></summary><div class="in">
-    <div class="note" style="color:var(--mute)">Fix these in your Relief Sales template and load it again.</div>
+    <div class="note" style="color:var(--mute)">Fix these in your Relief Sales template and load it again, or fix the TINs here. <button type="button" class="tin9" data-kind="sa" title="Pad short TINs with leading zeros and cut long TINs to the first 9 digits">Force TIN to 9 digits</button></div>
     <div class="scroll"><table id="safix"></table></div></div></details>
    <details class="sec"><summary>Preview (first 5 rows)</summary><div class="in scroll"><table id="saprev"></table></div></details>
   </section>
@@ -419,7 +419,7 @@ function buildRecords(aoa,hr,map,stopAtGap=true,fields=FIELDS){
     if(!digits&&!hasName){if(stopAtGap&&recs.length)break;continue}
     if(!digits&&/^(grand\s+)?total/i.test(rec.co))continue;
     if(fields===FIELDS){rec.ex=r2(rec.ex+rec.dq);rec.zr=0}   // exempt = Exempt(D) + Does not Qualify(E); zeroRated is always 0
-    rec.src=i;rec.tin=digits?Number(digits):null;
+    rec.src=i;rec.tin=digits?Number(digits):null;rec.tinRaw=digits;
     rec.tinOk=digits.length===9;
     if(!rec.tinOk)badTin++;
     recs.push(rec);
@@ -970,7 +970,7 @@ function eqRecs(a,hr,map,gap,fa){
     {const dv=g('due');rec.due=(dv==null||dv==='')?null:toNum(dv)}
     if(!dg&&!(rec.co||rec.ln||rec.fn)){if(gap&&recs.length)break;continue}
     if(!dg&&/^(grand\s+)?total/i.test(rec.co))continue;
-    rec.tin=dg?Number(dg):null;rec.tinOk=dg.length===9;recs.push(rec);
+    rec.tin=dg?Number(dg):null;rec.tinRaw=dg;rec.tinOk=dg.length===9;recs.push(rec);
   }
   return recs;
 }
@@ -1199,7 +1199,7 @@ function saRecs(a,hr,map,gap){
     const vr=g('vr');r.vr=blank(vr)?12:(typeof vr==='number'&&vr>0&&vr<1?r2(vr*100):toNum(vr));
     r.ov=blank(g('ov'))?r2(r.tx*r.vr/100):toNum(g('ov'));              // the template's own value, or ROUND(taxable x rate / 100, 2)
     r.ts=blank(g('ts'))?r2(r.ex+r.zr+r.tx):toNum(g('ts'));             // the template's own value, or exempt + zeroRated + taxable
-    r.tin=dg?Number(dg):null;r.tinOk=dg.length===9;recs.push(r);
+    r.tin=dg?Number(dg):null;r.tinRaw=dg;r.tinOk=dg.length===9;recs.push(r);
   }
   return recs;
 }
@@ -1438,6 +1438,24 @@ $('#eqfix').addEventListener('click',e=>{
     $('#eqfixrate').hidden=!rate;$('#eqdelatc').hidden=!atc;d.hidden=!(rate||atc);
   };
 })();
+// ---- "Force TIN to 9 digits": under 9 digits -> leading zeros; over 9 -> first 9 digits (drops the extra, e.g. a branch code) ----
+document.addEventListener('click',e=>{
+  const b=e.target.closest&&e.target.closest('.tin9');if(!b)return;
+  const kind=b.dataset.kind;
+  const L=kind==='p'?(typeof res!=='undefined'?res.recs:[]):kind==='eq'?eq.recs:sa.recs;
+  const ED=kind==='p'?edits:kind==='eq'?eqEdits:saEdits;
+  let n=0;
+  L.forEach(r=>{
+    if(r.tin==null)return;                       // blank TIN: nothing to force
+    const cur=(ED[r.src]&&ED[r.src].tin!=null)?String(ED[r.src].tin):(r.tinRaw||String(r.tin)).replace(/\D/g,'');
+    if(!cur||cur.length===9)return;
+    const v=cur.length<9?cur.padStart(9,'0'):cur.slice(0,9);
+    (ED[r.src]=ED[r.src]||{}).tin=v;n++;
+  });
+  if(!n){msg('No TIN needs forcing. Rows with a blank TIN cannot be fixed this way.',1);return}
+  if(kind==='p')recompute();else if(kind==='eq')eqRecompute();else saRecompute();
+  msg(n+' TIN(s) changed to 9 digits. Check them in the list, since a cut-off TIN may be wrong.');
+});
 // ---- The filer's own TIN must not appear in the transactions (flagged red like any other problem) ----
 const SELFMSG="Same as the filer's TIN: correct it here";
 function filerTinDigits(){const el=document.getElementById('f_tin'),d=el?el.value.replace(/\D/g,''):'';return d.length===9?d:''}
