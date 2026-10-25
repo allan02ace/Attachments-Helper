@@ -17,9 +17,9 @@ body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 "Segoe UI",sy
 main{max-width:1100px;margin:0 auto;padding:0 18px 48px}
 h1{font-size:27px;font-weight:800;margin:0;letter-spacing:-.01em;color:var(--pageink);display:flex;align-items:center;gap:12px}
 .logo{width:40px;height:40px;flex:none;border-radius:9px;display:block}
-.drop{display:block;border:2px dashed var(--line);border-radius:10px;background:var(--panel);padding:28px 18px;text-align:center;cursor:pointer}
+.drop{display:block;border:2px dashed var(--line);border-radius:12px;background:var(--panel);padding:54px 18px;text-align:center;cursor:pointer}
 .drop:hover,.drop.over{border-color:var(--acc)}
-.drop b{display:block;font-size:17px}.drop span{color:var(--mute)}
+.drop b{display:block;font-size:24px}.drop span{color:var(--mute)}
 .drop input{position:absolute;opacity:0;width:1px;height:1px}
 .drop:focus-within{outline:3px solid var(--focus);outline-offset:2px}
 #work{display:none;margin-top:18px}
@@ -80,7 +80,8 @@ input:disabled,select:disabled{opacity:.5}
 .btn input{position:absolute;opacity:0;width:1px;height:1px}
 
 [hidden]{display:none!important}
-body.loaded .drop,body.loaded #msg{display:none}
+body.loaded .drop,body.loaded #msg,body.loaded #pretabs{display:none}
+.prehint{margin:-4px 0 14px;padding:12px 14px;border:1px solid var(--pageline);border-radius:8px;font-size:14px;line-height:1.5}.prehint b{display:block;margin-bottom:2px}.prehint span{display:block;opacity:.85}
 #msg{margin-top:10px}
 #msg:empty{display:none}
 #msg:not(:empty){display:block;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:9px 14px}
@@ -180,6 +181,14 @@ dialog#perdlg::backdrop{background:rgba(0,0,0,.5)}
 #sumtbl td:first-child,#sumtbl th:first-child{text-align:left}
 #sumtbl .tot{border-left:2px solid var(--line);font-weight:700}
 #sumtbl p{margin:10px 0 0;color:var(--mute);font-size:13px}
+
+/* DAT CONVERT tab */
+.dcbox{display:block;position:relative;border:2px dashed var(--line);border-radius:10px;background:var(--panel);padding:22px 18px;text-align:center;cursor:pointer;margin-bottom:12px}
+.dcbox:hover,.dcbox:focus-within{border-color:var(--acc)}
+.dcbox b{display:block;font-size:16px}
+.dcbox span{color:var(--mute);font-size:13px}
+.dcbox input{position:absolute;opacity:0;width:1px;height:1px}
+.tab-dc .xfields,.tab-dc #awforms,.tab-dc #gen,.tab-dc #genm{display:none!important}
 </style>
 </head>
 <body>
@@ -187,8 +196,18 @@ dialog#perdlg::backdrop{background:rgba(0,0,0,.5)}
 <header class="top"><h1><img class="logo" src="icon-192.png" width="40" height="40" alt="">Relief &amp; 1601-EQ Formatter</h1>
  <button type="button" class="login" id="login">Log in</button></header>
 
-<label class="drop" id="drop"><input type="file" id="file" accept=".xlsx,.xls,.xlsm,.csv">
-<b>Choose a file or drop it here</b><span>Your purchases file, or an already filled Relief Purchases, Relief Sales or 1601-EQ template (.xlsx, .xls or .csv)</span></label>
+<div id="pretabs">
+ <div class="tabs" role="tablist" aria-label="What do you want to make?">
+  <button class="tab" role="tab" data-pre="rel" aria-selected="true" type="button">Relief Purchases</button>
+  <button class="tab" role="tab" data-pre="eq" aria-selected="false" tabindex="-1" type="button">1601-EQ (QAP)</button>
+  <button class="tab" role="tab" data-pre="sa" aria-selected="false" tabindex="-1" type="button">Relief Sales</button>
+  <button class="tab" role="tab" data-pre="aw" aria-selected="false" tabindex="-1" type="button">SAWT</button>
+  <button class="tab" role="tab" data-pre="dc" aria-selected="false" tabindex="-1" type="button">DAT CONVERT</button>
+ </div>
+ <div class="prehint" id="prehint" role="tabpanel"></div>
+</div>
+<label class="drop" id="drop"><input type="file" id="file" accept=".xlsx,.xls,.xlsm,.csv,.dat">
+<b>Choose a file or drop it here</b></label>
 <div id="msg" role="status" aria-live="polite"></div>
 
 <div id="work">
@@ -199,7 +218,7 @@ dialog#perdlg::backdrop{background:rgba(0,0,0,.5)}
    <select id="sasheet" aria-label="Relief Sales sheet" title="Sheet used for Relief Sales" hidden></select>
    <select id="awsheet" aria-label="SAWT sheet" title="Sheet used for SAWT" hidden></select>
   <label class="chk"><input type="checkbox" id="gap" checked> Stop at the first blank row</label>
-  <label class="btn">Change file<input type="file" id="file2" accept=".xlsx,.xls,.xlsm,.csv"></label></div>
+  <label class="btn">Change file<input type="file" id="file2" accept=".xlsx,.xls,.xlsm,.csv,.dat"></label></div>
 
  <div class="panel" id="datpanel">
   <div class="fhead"><b>Filer details</b><span class="fline" id="fline"></span><button type="button" id="fedit" aria-expanded="false" aria-controls="fbody">Edit</button></div>
@@ -244,6 +263,7 @@ dialog#perdlg::backdrop{background:rgba(0,0,0,.5)}
   <button class="tab" role="tab" id="t_eq" aria-controls="tab_eq" aria-selected="false" tabindex="-1" type="button">1601-EQ (QAP) <small id="tn_eq"></small></button>
   <button class="tab" role="tab" id="t_sa" aria-controls="tab_sa" aria-selected="false" tabindex="-1" type="button">Relief Sales <small id="tn_sa"></small></button>
   <button class="tab" role="tab" id="t_aw" aria-controls="tab_aw" aria-selected="false" tabindex="-1" type="button">SAWT <small id="tn_aw"></small></button>
+  <button class="tab" role="tab" id="t_dc" aria-controls="tab_dc" aria-selected="false" tabindex="-1" type="button">DAT CONVERT <small id="tn_dc"></small></button>
  </div>
 
  <section id="tab_rel" role="tabpanel" aria-labelledby="t_rel">
@@ -252,7 +272,7 @@ dialog#perdlg::backdrop{background:rgba(0,0,0,.5)}
   <div class="status" id="moinfo" hidden></div>
   <details class="sec" id="fixbox"><summary>Needs fixing <span id="fixcount" class="cnt"></span></summary><div class="in">
    <div class="note"><label><input type="checkbox" id="fixall"> Show all rows</label>
-    <span style="color:var(--mute)"> Fix a blank or wrong TIN, name or address here. Changes are used in both the .xls and the DAT file.</span> <button type="button" class="tin9" data-kind="p" title="Pad short TINs with leading zeros and cut long TINs to the first 9 digits">Force TIN to 9 digits</button></div>
+    <span style="color:var(--mute)"> Fix a blank or wrong TIN, name or address here. Changes are used in both the .xls and the DAT file, and a fixed TIN or name is also fixed in the 1601-EQ when both tabs use the same sheet.</span> <button type="button" class="tin9" data-kind="p" title="Pad short TINs with leading zeros and cut long TINs to the first 9 digits">Force TIN to 9 digits</button></div>
    <div class="scroll"><table id="fix"></table></div></div></details>
   <details class="sec"><summary>Preview (first 5 rows)</summary><div class="in scroll"><table id="prev"></table></div></details>
   <details class="sec"><summary>Advanced: column mapping</summary><div class="in scroll"><table id="map"></table></div></details>
@@ -291,6 +311,18 @@ dialog#perdlg::backdrop{background:rgba(0,0,0,.5)}
    <details class="sec"><summary>Advanced: column mapping</summary><div class="in scroll"><table id="awmap"></table></div></details>
   </section>
 
+  <section id="tab_dc" role="tabpanel" aria-labelledby="t_dc" hidden>
+   <label class="dcbox" id="dcdrop"><input type="file" id="dcfile" accept=".dat,.DAT,.txt">
+    <b>Choose a DAT file or drop it here</b>
+    <span>Relief Purchases (SLP) and Relief Sales (SLS) DAT files are turned back into their Excel template. 1601-EQ and SAWT DAT files are not supported yet.</span></label>
+   <div class="cardbar" id="dccardbar" hidden><div class="cards" id="cards_dc"></div></div>
+   <div class="status" id="dcinfo"></div>
+   <details class="sec" id="dcfixbox"><summary>Check against the header line <span id="dcfixcount" class="cnt"></span></summary><div class="in">
+    <div class="scroll"><table id="dcfix"></table></div>
+    <div class="scroll"><table id="dcbad"></table></div></div></details>
+   <details class="sec"><summary>Preview (first 5 rows)</summary><div class="in scroll"><table id="dcprev"></table></div></details>
+  </section>
+
  <div id="xbar">
   <div id="xmsg" role="status" aria-live="polite"></div>
   <div class="xrow">
@@ -307,6 +339,8 @@ dialog#perdlg::backdrop{background:rgba(0,0,0,.5)}
     <button id="dleq" class="primary" type="button" hidden title="One file is made for each month">Download .xls</button>
     <button id="g2307" class="primary" type="button" hidden title="Make BIR Form 2307 certificates for the payees you choose (PDF)">Generate 2307</button>
     <button id="dlsa" class="primary" type="button" hidden title="Saves the Relief Sales rows as an .xls file">Download .xls</button>
+    <button id="dlaw" class="primary" type="button" hidden title="Saves the SAWT rows as an .xls file (SAWT template)">Download .xls</button>
+    <button id="dldc" class="primary" type="button" hidden disabled title="Saves the rows of the DAT file as an .xls file in the Excel template">Download .xls</button>
      <button id="gen" type="button">Generate DAT file</button>
      <button id="genm" type="button" hidden title="Splits the sheet by its Month column and makes one DAT file for each month">Generate DAT per month</button>
    </div>
@@ -422,7 +456,7 @@ function toNum(v){
 
 // aoa + header row + mapping -> clean records
 function buildRecords(aoa,hr,map,stopAtGap=true,fields=FIELDS){
-  const recs=[];let badTin=0;
+  const recs=[];let badTin=0,zeroRows=0;
   for(let i=hr+1;i<aoa.length;i++){
     const row=aoa[i]||[];
     const get=fi=>map[fi]>=0?row[map[fi]]:null;
@@ -433,13 +467,17 @@ function buildRecords(aoa,hr,map,stopAtGap=true,fields=FIELDS){
     const hasName=TEXT_KEYS.some(k=>rec[k]);
     if(!digits&&!hasName){if(stopAtGap&&recs.length)break;continue}
     if(!digits&&/^(grand\s+)?total/i.test(rec.co))continue;
+    // An empty placeholder row (e.g. a template row whose formulas return 0): the TIN is blank or only zeros, every name and
+    // address cell is blank or only zeros, and every amount is 0. It is not a transaction, so it is left out (and counted).
+    // A row with any real value stays, so a missing TIN with amounts still shows up in "Needs fixing".
+    if(/^0*$/.test(digits)&&TEXT_KEYS.every(k=>/^[0.\-\s]*$/.test(rec[k]||''))&&fields.every(f=>!f.num||Math.abs(rec[f.k]||0)<0.005)){zeroRows++;continue}
     if(fields===FIELDS){rec.ex=r2(rec.ex+rec.dq);rec.zr=0}   // exempt = Exempt(D) + Does not Qualify(E); zeroRated is always 0
     rec.src=i;rec.tin=digits?Number(digits):null;rec.tinRaw=digits;
     rec.tinOk=digits.length===9;
     if(!rec.tinOk)badTin++;
     recs.push(rec);
   }
-  return {recs,badTin};
+  return {recs,badTin,zeroRows};
 }
 
 
@@ -581,6 +619,7 @@ function bestSheet(){
 }
 function load(file){
   if(!file)return;
+  if(/\.dat$/i.test(file.name)){loadDat(file);return}      // a BIR DAT file: DAT CONVERT tab
   const r=new FileReader();
   r.onerror=()=>msg('Could not read that file.',1);
   r.onload=e=>{
@@ -620,7 +659,7 @@ function info(){
   if(hr<0)return;
   const miss=fields.filter((f,i)=>map[i]<0&&f.k!=='iv').map(f=>f.t);
   const bad=res.recs.filter(r=>probs(r).length).length;
-  $('#info').innerHTML=(tmpl?'Ready template detected: its values are used as they are. ':'')+'Header found on row '+(hr+1)+'. <b>'+res.recs.length+'</b> rows will be written.'+
+  $('#info').innerHTML=(tmpl?'Ready template detected: its values are used as they are. ':'')+'Header found on row '+(hr+1)+'. <b>'+res.recs.length+'</b> rows will be written.'+(res.zeroRows?' '+res.zeroRows+' empty row(s) with only zeros were skipped.':'')+
     (bad?' <span class="warn">'+bad+' row(s) have a missing or wrong TIN (or the filer\'s own TIN), name or address. Use "Check and fix" below.</span>':'')+
     (miss.length?' <span class="warn">No column found for: '+miss.join(', ')+' (filled with blank or 0).</span>':'');
 }
@@ -656,6 +695,7 @@ $('#fix').addEventListener('change',e=>{
   else{v=cleanText(t.value).toUpperCase();t.value=v}
   (edits[src]=edits[src]||{})[k]=v;
   applyEdit(r,edits[src]);
+  mirrorEdit('p',src,k,v);      // the same transaction in the 1601-EQ gets the same fix
   res.badTin=res.recs.filter(x=>!x.tinOk).length;
   const p=probs(r),c=document.getElementById('st_'+src);
   if(c){c.textContent=p.length?p.join(', '):'OK';c.className=p.length?'bad':'okc'}
@@ -1082,7 +1122,7 @@ function eqUse(n){
 function eqRecompute(){
   eq.recs=eq.hr>=0?eqRecs(eq.aoa,eq.hr,eq.map,$('#gap').checked,eq.fa):[];
   if(eqDeleted.size)eq.recs=eq.recs.filter(r=>!eqDeleted.has(r.src));      // rows the user deleted from the Needs fixing list
-  eq.recs.forEach(r=>{const e=eqEdits[r.src];if(e){if(e.tin!=null){r.tin=e.tin?Number(e.tin):null;r.tinOk=e.tin.length===9}if(e.atc!=null)r.atc=e.atc;if(e.rt!=null)r.rt=e.rt;if(e.mo!==undefined){r.mo=e.mo;if(e.mo)r.yr=e.yr||r.yr}}});
+  eq.recs.forEach(r=>{const e=eqEdits[r.src];if(e){if(e.tin!=null){r.tin=e.tin?Number(e.tin):null;r.tinOk=e.tin.length===9}if(e.atc!=null)r.atc=e.atc;if(e.rt!=null)r.rt=e.rt;if(e.mo!==undefined){r.mo=e.mo;if(e.mo)r.yr=e.yr||r.yr}if(e.co!=null)r.co=e.co;if(e.ln!=null)r.ln=e.ln;if(e.fn!=null)r.fn=e.fn;if(e.mn!=null)r.mn=e.mn}});
   const hdr=eq.hr>=0?eq.aoa[eq.hr]:[];
   const opts=hdr.map((h,i)=>h==null||h===''?'':'<option value="'+i+'">'+colLetter(i)+' - '+esc(flat(h))+'</option>').join('');
   $('#eqmap').innerHTML='<tr><th>Template column</th><th>Taken from your file</th></tr>'+EQF.map((f,i)=>'<tr><td>'+f.t+'</td><td><select data-i="'+i+'"><option value="-1">(none)</option>'+opts+'</select></td></tr>').join('')+'<tr><td>tax_amount</td><td style="color:var(--mute)">Calculated: income_payment x ewt_rate / 100</td></tr>';
@@ -1168,12 +1208,26 @@ function genQap(){
 function showEqSummary(){
   const rows=eq.recs.filter(r=>r.mo);
   if(!rows.length)return false;
-  let inc=0,tax=0;
-  rows.forEach(r=>{inc=r2(inc+r.am);tax=r2(tax+r2(r.am*r.rt/100))});   // tax_amount = ROUND(income x rate / 100, 2) per row, as in the template
-  const left=eq.recs.length-rows.length;
-  $('#sumttl').textContent='1601-EQ Summary';
-  $('#sumsub').textContent=fname+' \u00b7 '+rows.length+' rows'+(left?' ('+left+' without a month left out)':'');
-  $('#sumtxt').textContent=['Total Income Payment Schedule 1 : '+fmt(inc),'Total Tax Amount : '+fmt(tax)].join('\n');
+  const left=eq.recs.length-rows.length,tx=r=>r2(r.am*r.rt/100);   // tax_amount = ROUND(income x rate / 100, 2) per row, as in the template
+  const sum=a=>({n:a.length,inc:a.reduce((t,r)=>r2(t+r.am),0),tax:a.reduce((t,r)=>r2(t+tx(r)),0)});
+  const sp=typeof eqMonths==='function'?eqMonths():{months:[]},tbl=$('#sumtbl'),txt=$('#sumtxt');
+  if(sp.months.length>=2){      // 2 or more months: one column per month and a Total column, the same as the Relief summary
+    const S=sp.months.map(x=>sum(x.recs)),T=sum(sp.months.flatMap(x=>x.recs));
+    let h='<table><tr><th></th>'+sp.months.map(x=>'<th class="num">'+PER_LONG[x.m-1]+' '+x.y+'</th>').join('')+'<th class="num tot">Total</th></tr>';
+    h+='<tr><td>Rows</td>'+S.map(v=>'<td class="num">'+v.n+'</td>').join('')+'<td class="num tot">'+T.n+'</td></tr>';
+    h+='<tr><td>Total Income Payment Schedule 1</td>'+S.map(v=>'<td class="num">'+fmt(v.inc)+'</td>').join('')+'<td class="num tot">'+fmt(T.inc)+'</td></tr>';
+    h+='<tr><td>Total Tax Amount</td>'+S.map(v=>'<td class="num">'+fmt(v.tax)+'</td>').join('')+'<td class="num tot">'+fmt(T.tax)+'</td></tr></table>';
+    if(left)h+='<p class="warn">'+left+' row(s) have no readable month and are not counted above.</p>';
+    tbl.innerHTML=h;tbl.hidden=false;txt.hidden=true;
+    $('#sumttl').textContent='1601-EQ Summary per month';
+    $('#sumsub').textContent=fname+' \u00b7 '+sp.months.length+' months';
+  }else{
+    const t=sum(rows);
+    tbl.hidden=true;txt.hidden=false;
+    $('#sumttl').textContent='1601-EQ Summary';
+    $('#sumsub').textContent=fname+' \u00b7 '+rows.length+' rows'+(left?' ('+left+' without a month left out)':'');
+    txt.textContent=['Total Income Payment Schedule 1 : '+fmt(t.inc),'Total Tax Amount : '+fmt(t.tax)].join('\n');
+  }
   const d=$('#sum');if(!d.open)d.showModal();
   return true;
 }
@@ -1341,8 +1395,8 @@ const awProbs=r=>eqProbs(r).filter(x=>x!=='No month');     // the month column i
 const awHas=()=>aw.hr>=0&&aw.recs.length>0;
 const awPrefer=()=>awHas()&&(/sawt/i.test($('#awsheet').value||'')||(aw.map[EQI.rt]>=0&&/^cwtrate/.test(norm(aw.aoa[aw.hr][aw.map[EQI.rt]]))));
 // Column choice for SAWT: the 1601-EQ names, then
-//  income payment <- "Total Amount Sold (E) = (A+B+C+D)", else "TOTAL AMOUNT", else "income payment"
-//  ewt rate       <- the FIRST "CWT Rate" column from the left
+//  income payment <- "Total Amount Sold (E) = (A+B+C+D)", else "TOTAL AMOUNT", else "income payment", else a heading with "amount purchased" / "vatable amount" / "vatable amt"
+//  ewt rate       <- the FIRST "CWT Rate" column from the left, else "EWT Rate" / "ATC Rate"
 function awMapFor(h){
   const m=eqMap(h),n=(h||[]).map(norm);
   const first=f=>{for(let i=0;i<n.length;i++)if(n[i]&&f(n[i]))return i;return -1};
@@ -1355,15 +1409,17 @@ function awMapFor(h){
   if(m[EQI.fn]<0)set('fn',first(x=>x==='firstname'));
   if(m[EQI.mn]<0)set('mn',first(x=>x==='middlename'));
   if(m[EQI.br]<0)set('br',first(x=>x==='branch'||x==='branchcode'||x==='branchtin'));
-  if(m[EQI.atc]<0)set('atc',first(x=>x==='atc'||x.indexOf('atc')>=0&&x.length<=14));      // ATC, ATC Code, 2307 ATC CODE
+  if(m[EQI.atc]<0)set('atc',first(x=>x==='atc'||x.indexOf('atc')>=0&&x.length<=14&&x.indexOf('rate')<0));      // ATC, ATC Code, 2307 ATC CODE (not "ATC Rate")
   if(m[EQI.due]<0){let d=first(x=>x==='cwtdue'||x==='ewtdue'||x==='taxwithheld'||x==='taxamount');if(d<0)d=first(x=>x.startsWith('2307')&&x.indexOf('atc')<0);set('due',d)}
   // income payment: "Total Amount Sold (E) = (A+B+C+D)", else "TOTAL AMOUNT", else "income payment"
   const ia=first(x=>x.startsWith('totalamountsold')),ib=first(x=>x.startsWith('totalamou')&&!x.startsWith('totalamountofpurchase')),ic=first(x=>x==='incomepayment');
-  const am=ia>=0?ia:ib>=0?ib:ic>=0?ic:m[EQI.am];
+  // any column whose heading has the words "amount purchased", "vatable amount" or "vatable amt" (not "non-vatable"), after the three above
+  const id=first(x=>(x.indexOf('amountpurchased')>=0||x.indexOf('vatableamount')>=0||x.indexOf('vatableamt')>=0)&&x.indexOf('nonvatable')<0);
+  const am=ia>=0?ia:ib>=0?ib:ic>=0?ic:id>=0?id:m[EQI.am];
   m[EQI.am]=am;
   // EWT rate: the FIRST "CWT Rate" column from the left
   const rt=first(x=>x.startsWith('cwtrate'));if(rt>=0)m[EQI.rt]=rt;
-  else if(m[EQI.rt]<0)set('rt',first(x=>x==='ewtrate'||x==='rate'||x==='taxrate'));
+  else if(m[EQI.rt]<0)set('rt',first(x=>x==='ewtrate'||x.startsWith('atcrate')||x==='rate'||x==='taxrate'));
   return m;
 }
 function awHeaderFind(a){
@@ -1591,6 +1647,7 @@ function onFixTin(kind,e){
   const d=t.value.replace(/\D/g,'');t.value=d;
   (ED[src]=ED[src]||{}).tin=d;
   r.tin=d?Number(d):null;r.tinOk=d.length===9;
+  if(kind==='eq')mirrorEdit('eq',src,'tin',d);      // the same transaction in Relief Purchases (SLSP) gets the same TIN
   const p=pf(r),c=document.getElementById(kind+'st_'+src);
   if(c){c.textContent=p.length?p.join(', '):'OK';c.className=p.length?'bad':'okc'}
   _fixLock=true;try{renderCards()}finally{_fixLock=false}
@@ -1649,6 +1706,29 @@ $('#eqfix').addEventListener('click',e=>{
     $('#eqfixrate').hidden=!rate;$('#eqdelatc').hidden=!atc;d.hidden=!(rate||atc);
   };
 })();
+// ---- Relief Purchases (SLSP) <-> 1601-EQ: a fix made in one "Needs fixing" list also applies to the same transaction in the other ----
+// It works when both tabs read the SAME sheet (the row numbers are then the same rows). TIN and names are shared;
+// the address is Relief only, and ATC / rate / month are 1601-EQ only, so those stay on their own side.
+const sameSheet=()=>!!$('#sheet').value&&$('#sheet').value===$('#eqsheet').value;
+const SHARED=['tin','co','ln','fn','mn'];
+function mirrorEdit(from,src,k,v){
+  if(!sameSheet()||!SHARED.includes(k))return;
+  if(from==='p'){
+    (eqEdits[src]=eqEdits[src]||{})[k]=v;
+    if(eq.hr>=0)eqRecompute();
+  }else if(from==='eq'&&k==='tin'){
+    (edits[src]=edits[src]||{}).tin=v;
+    if(hr>=0){const keep=_fixLock;_fixLock=true;try{recompute()}finally{_fixLock=keep}}      // keep the box you are typing in
+  }
+}
+function mirrorTin(from,src,v){      // "Force TIN to 9 digits": write the fix now, refresh the other tab once at the end
+  if(!sameSheet())return;
+  if(from==='p')(eqEdits[src]=eqEdits[src]||{}).tin=v;else if(from==='eq')(edits[src]=edits[src]||{}).tin=v;
+}
+function mirrorFlush(from){
+  if(!sameSheet())return;
+  if(from==='p'&&eq.hr>=0)eqRecompute();else if(from==='eq'&&hr>=0)recompute();
+}
 // ---- "Force TIN to 9 digits": under 9 digits -> leading zeros; over 9 -> first 9 digits (drops the extra, e.g. a branch code) ----
 document.addEventListener('click',e=>{
   const b=e.target.closest&&e.target.closest('.tin9');if(!b)return;
@@ -1661,10 +1741,11 @@ document.addEventListener('click',e=>{
     const cur=(ED[r.src]&&ED[r.src].tin!=null)?String(ED[r.src].tin):(r.tinRaw||String(r.tin)).replace(/\D/g,'');
     if(!cur||cur.length===9)return;
     const v=cur.length<9?cur.padStart(9,'0'):cur.slice(0,9);
-    (ED[r.src]=ED[r.src]||{}).tin=v;n++;
+    (ED[r.src]=ED[r.src]||{}).tin=v;n++;mirrorTin(kind,r.src,v);
   });
   if(!n){msg('No TIN needs forcing. Rows with a blank TIN cannot be fixed this way.',1);return}
   if(kind==='p')recompute();else if(kind==='eq')eqRecompute();else if(kind==='aw')awRecompute();else saRecompute();
+  mirrorFlush(kind);
   msg(n+' TIN(s) changed to 9 digits. Check them in the list, since a cut-off TIN may be wrong.');
 });
 // ---- The filer's own TIN must not appear in the transactions (flagged red like any other problem) ----
@@ -1684,12 +1765,12 @@ let tab='rel';
 const MONS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function setTab(t,focus){
   tab=t;
-  [['rel','#tab_rel','#t_rel'],['eq','#tab_eq','#t_eq'],['sa','#tab_sa','#t_sa'],['aw','#tab_aw','#t_aw']].forEach(([k,p,b])=>{
+  [['rel','#tab_rel','#t_rel'],['eq','#tab_eq','#t_eq'],['sa','#tab_sa','#t_sa'],['aw','#tab_aw','#t_aw'],['dc','#tab_dc','#t_dc']].forEach(([k,p,b])=>{
     const on=k===t;$(p).hidden=!on;$(b).setAttribute('aria-selected',String(on));$(b).tabIndex=on?0:-1;if(on&&focus)$(b).focus();
   });
   const multi=!!wb&&wb.SheetNames.length>1;
   $('#sheet').hidden=!(t==='rel'&&multi);$('#eqsheet').hidden=!(t==='eq'&&multi);$('#sasheet').hidden=!(t==='sa'&&multi);$('#awsheet').hidden=!(t==='aw'&&multi);$('#awforms').hidden=t!=='aw';
-  $('#dl').hidden=t!=='rel';$('#dleq').hidden=t!=='eq';$('#g2307').hidden=t!=='eq';$('#dlsa').hidden=t!=='sa';
+  $('#dl').hidden=t!=='rel';$('#dleq').hidden=t!=='eq';$('#g2307').hidden=t!=='eq';$('#dlsa').hidden=t!=='sa';$('#dlaw').hidden=t!=='aw';$('#dldc').hidden=t!=='dc';document.body.classList.toggle('tab-dc',t==='dc');
   $('#f_rt').value=t==='eq'?'QAP 1601EQ':t==='sa'?'RELIEF Sales':t==='aw'?'SAWT':'RELIEF Purchases';periodDefault();      // the DAT button follows the open tab
   if(window.monthUI)monthUI();
 }
@@ -1762,7 +1843,7 @@ $('#t_sa').onclick=()=>setTab('sa');
 $('#t_aw').onclick=()=>setTab('aw');
 document.querySelector('.tabs').addEventListener('keydown',e=>{
   if(e.key==='ArrowRight'||e.key==='ArrowLeft'||e.key==='Home'||e.key==='End'){e.preventDefault();
-    const T=['rel','eq','sa','aw'],i=T.indexOf(tab),n=e.key==='Home'?0:e.key==='End'?T.length-1:e.key==='ArrowLeft'?Math.max(0,i-1):Math.min(T.length-1,i+1);setTab(T[n],true)}
+    const T=['rel','eq','sa','aw','dc'],i=T.indexOf(tab),n=e.key==='Home'?0:e.key==='End'?T.length-1:e.key==='ArrowLeft'?Math.max(0,i-1):Math.min(T.length-1,i+1);setTab(T[n],true)}
 });
 $('#f_rt').addEventListener('change',()=>setTab({'QAP 1601EQ':'eq','RELIEF Sales':'sa','SAWT':'aw'}[$('#f_rt').value]||'rel'));
 $('#fedit').onclick=()=>{if($('#fbody').hidden)setFiler(true);else closeFiler()};
@@ -1777,7 +1858,7 @@ document.addEventListener('drop',e=>{
   e.preventDefault();
   if(e.target&&e.target.closest&&e.target.closest('#drop'))return;
   const f=e.dataTransfer&&e.dataTransfer.files[0];
-  if(f&&/\.(xlsx|xlsm|xls|csv)$/i.test(f.name))load(f);
+  if(f&&/\.(xlsx|xlsm|xls|csv|dat)$/i.test(f.name))load(f);
 });
 renderFilerLine();setFiler(!filerOk());
 // ---- One sheet for every tab: picking a sheet (e.g. "PJ AUG") on one tab keeps it on the other tabs ----
@@ -2004,6 +2085,7 @@ function perUI(){
   const add=t=>has?' for '+t:'';
   $('#dl').textContent='Download .xls'+add(p.short);
   $('#dlsa').textContent='Download .xls'+add(p.short);
+  $('#dlaw').textContent='Download .xls'+add(p.short);
   $('#gen').textContent=has?'Generate DAT for '+p.short:'Generate DAT file';
   $('#g2307').textContent=has?'Generate 2307 for Q'+p.q+' '+p.yyyy:'Generate 2307';
 }
@@ -2014,7 +2096,7 @@ $('#f_per_m').addEventListener('input',()=>{if(/^\d{4}-\d{2}$/.test($('#f_per_m'
 $('#per_ok').onclick=()=>{if(perHas())perConfirm();else $('#f_per_m').focus()};
 
 // which exports use the period, and what to call them in the question
-const PER_BTN={dl:()=>'the Relief Purchases .xls',dlsa:()=>'the Relief Sales .xls',g2307:()=>'the 2307 certificates',
+const PER_BTN={dl:()=>'the Relief Purchases .xls',dlsa:()=>'the Relief Sales .xls',dlaw:()=>'the SAWT .xls',g2307:()=>'the 2307 certificates',
   gen:()=>{const t=$('#f_rt').value;return t==='QAP 1601EQ'?'the 1601-EQ (QAP) DAT file':t==='SAWT'?'the SAWT DAT file':t==='RELIEF Sales'?'the Relief Sales DAT file':'the Relief Purchases DAT file'}};
 // nothing to export -> let the click through, the app's own "no rows" message explains
 function perReady(id){
@@ -2030,7 +2112,7 @@ function perAsk(btn){
   $('#perdlg_p').textContent=perHas()?p.long:'(no month chosen)';
   const q0=(p.q-1)*3;
   $('#perdlg_s').textContent=id==='g2307'?'The certificates cover the quarter '+PER_SHORT[q0]+' to '+PER_SHORT[q0+2]+' '+p.yyyy+'.'
-    :dat?'This month goes into the file name and the file header.':'This month goes into the file name.';
+    :dat?'This month goes into the file name and the file header.':id==='dlaw'?'This month goes into the file name and the Reporting_Month column.':'This month goes into the file name.';
   $('#perdlg').showModal();
 }
 // capture phase: runs before the button's own handler, so the export waits for the answer
@@ -2103,13 +2185,14 @@ window.monthUI=function(){
   const isEq=typeof tab!=='undefined'&&tab==='eq',isAw=typeof tab!=='undefined'&&tab==='aw';
   const sp=isEq?eqMonths():isAw?awMonths():(typeof tab!=='undefined'&&tab==='rel'&&hr>=0)?moNow():{months:[],skipped:0};
   const on=sp.months.length>=2;
-  btn.hidden=!on;box.hidden=!on;$('#dlm').hidden=!on||isEq||isAw;
+  if(isEq)$('#dleq').textContent=on?'Download '+sp.months.length+' .xls files (one per month)':'Download .xls';      // it makes one 1601-EQ .xls for each month
+  btn.hidden=!on;box.hidden=!on;$('#dlm').hidden=!on||isEq;
   if(!on){box.textContent='';return}
   btn.textContent='Generate '+sp.months.length+' DAT files (one per month)';
   $('#dlm').textContent='Download '+sp.months.length+' .xls files (one per month)';
-  if(isAw){box.innerHTML='The SAWT rows cover <b>'+sp.months.length+' months</b>: '+sp.months.map(x=>'<b>'+PER_LONG[x.m-1]+' '+x.y+'</b> ('+x.recs.length+' rows)').join(', ')+'. \u201cGenerate DAT file\u201d makes one file for the Reporting Period; the per-month button makes one SAWT DAT file for each month.'+
+  if(isAw){box.innerHTML='The SAWT rows cover <b>'+sp.months.length+' months</b>: '+sp.months.map(x=>'<b>'+PER_LONG[x.m-1]+' '+x.y+'</b> ('+x.recs.length+' rows)').join(', ')+'. \u201cGenerate DAT file\u201d and \u201cDownload .xls\u201d make one file for the Reporting Period; the per-month buttons make one SAWT DAT file and one .xls file for each month.'+
     (sp.skipped?' <span class="warn">'+sp.skipped+' row(s) have no month and are left out.</span>':'');return}
-  if(isEq){box.innerHTML='The 1601-EQ rows cover <b>'+sp.months.length+' months</b>: '+sp.months.map(x=>'<b>'+PER_LONG[x.m-1]+' '+x.y+'</b> ('+x.recs.length+' rows)').join(', ')+'. \u201cGenerate DAT file\u201d makes one file for the Reporting Period; the per-month button makes one 1601-EQ DAT file for each month.'+
+  if(isEq){box.innerHTML='The 1601-EQ rows cover <b>'+sp.months.length+' months</b>: '+sp.months.map(x=>'<b>'+PER_LONG[x.m-1]+' '+x.y+'</b> ('+x.recs.length+' rows)').join(', ')+'. \u201cGenerate DAT file\u201d makes one file for the Reporting Period; the per-month buttons make one 1601-EQ .xls file and one DAT file for each month, and \u201cFull summary\u201d shows the totals of each month.'+
     (sp.skipped?' <span class="warn">'+sp.skipped+' row(s) have no month and are left out.</span>':'');return}
   box.innerHTML='This sheet covers <b>'+sp.months.length+' months</b>: '+
     sp.months.map(x=>'<b>'+PER_LONG[x.m-1]+' '+x.y+'</b> ('+x.recs.length+' rows)').join(', ')+'. The per-month buttons make one file for each month, and \u201cFull summary\u201d shows the totals of each month.'+
@@ -2159,6 +2242,7 @@ function genQapMonths(){
 // ---- Per month: .xls files and the summary (same split as the DAT files above) ----
 // One .xls (Relief Purchases template) for each month: <filer>_SLP_<MMYYYY>.xls
 $('#dlm').onclick=()=>{
+  if(tab==='aw')return dlAwMonths();
   const sp=moNow();
   if(!sp.months.length){msg('No row has a readable month, so no .xls files were made.',1);return}
   try{
@@ -2190,6 +2274,202 @@ window.monthSummary=function(){
 };
 $('#sum').addEventListener('close',()=>{$('#sumtbl').hidden=true;$('#sumtxt').hidden=false});   // the next summary (any kind) starts as plain text
 if(window.monthUI)monthUI();
+</script>
+<script>
+// ---- SAWT: Excel (.xls) in the SAWT template (same columns as the 1601-EQ template) ----
+// "Download .xls" makes one file for the Reporting Period (like "Generate DAT file"); with 2 or more months the per-month
+// button makes one file for each month. Every row is written as it is, with the fixes made in "Needs fixing"
+// (the DAT file adds up the same TIN + ATC into one line, the template keeps the rows). tax_amount is the template's own formula.
+function awXls(recs,y,m){
+  const ds=monthEnd(y,m);
+  return buildEqXls(recs.map(r=>Object.assign({},r,{ds})),b64ToU8(TPL2));
+}
+$('#dlaw').onclick=()=>{
+  if(!awHas()){msg('There are no SAWT rows to write. Load the SAWT template and pick its sheet.',1);return}
+  const bad=aw.recs.filter(r=>awProbs(r).length).length;
+  if(bad&&!confirm(bad+' row(s) have a missing or wrong TIN (or the filer\'s own TIN), name, ATC or rate. Download the SAWT .xls anyway?'))return;
+  try{
+    const my=perMY(),name=outName('SAWT',my[0],my[1]);
+    saveXls(awXls(aw.recs,+my[1],+my[0]),name);
+    msg('Downloaded '+name+' for '+perInfo().long+' ('+aw.recs.length+' rows).');
+  }catch(err){msg('Could not create the SAWT .xls file: '+(err&&err.message||err),1)}
+};
+function dlAwMonths(){
+  const sp=awMonths();
+  if(!sp.months.length){msg('No row has a readable month, so no .xls files were made.',1);return}
+  const bad=sp.months.reduce((n,x)=>n+x.recs.filter(r=>awProbs(r).length).length,0);
+  if(bad&&!confirm(bad+' row(s) have a missing or wrong TIN (or the filer\'s own TIN), name, ATC or rate. Download the SAWT .xls files anyway?'))return;
+  try{
+    msg('Creating files...');
+    const files=sp.months.map(x=>({buf:awXls(x.recs,x.y,x.m),name:outName('SAWT',String(x.m).padStart(2,'0'),String(x.y)),n:x.recs.length,label:PER_LONG[x.m-1]+' '+x.y}));
+    files.forEach((x,i)=>setTimeout(()=>saveXls(x.buf,x.name),i*400));
+    msg('Downloading '+files.length+' SAWT .xls files, one per month: '+files.map(x=>x.name+' ('+x.label+', '+x.n+' rows)').join('; ')+'.'+
+      (sp.skipped?' '+sp.skipped+' row(s) without a month were left out.':'')+' If your browser asks, allow multiple downloads.');
+  }catch(err){msg('Could not create the SAWT .xls files: '+(err&&err.message||err),1)}
+}
+</script>
+<script>
+// ---- DAT CONVERT: a BIR DAT file -> the Excel template ----
+// Starts with the SLSP files: Relief Purchases (H,P / D,P lines) and Relief Sales (H,S / D,S lines). It reads exactly what
+// buildDat and buildSalesDat write. 1601-EQ (HQAP) and SAWT (HSAWT) DAT files are recognised but not converted yet.
+const dc={name:'',kind:'',h:null,recs:[],bad:[],checks:[],notes:[],err:''};
+const dcNum=v=>{const n=parseFloat(String(v==null?'':v).replace(/,/g,'').trim());return isFinite(n)?r2(n):NaN};
+const dcTin=v=>String(v==null?'':v).replace(/\D/g,'');
+const dcTxt=v=>String(v==null?'':v).replace(/\s+/g,' ').trim();
+function dcParse(text){
+  const L=String(text).replace(/^\uFEFF/,'').split(/\r?\n/).map((l,i)=>({l,n:i+1})).filter(x=>x.l.trim());
+  if(!L.length)return {err:'The file is empty.'};
+  const hp=csvLine(L[0].l).map(x=>x.trim()),a=(hp[0]||'').toUpperCase(),b=(hp[1]||'').toUpperCase();
+  if(a==='HQAP')return {err:'This is a 1601-EQ (QAP) DAT file. Only Relief Purchases and Relief Sales DAT files can be converted for now.'};
+  if(a==='HSAWT')return {err:'This is a SAWT DAT file. Only Relief Purchases and Relief Sales DAT files can be converted for now.'};
+  const P=b==='P',S=b==='S';
+  if(a!=='H'||!(P||S))return {err:'That does not look like a Relief Purchases or Relief Sales DAT file (the first line should start with H,P or H,S).'};
+  if(hp.length<(P?19:15))return {err:'The header (first) line is too short: it has '+hp.length+' fields, a '+(P?'Purchases':'Sales')+' header has '+(P?21:17)+'.'};
+  const h=P?{tin:dcTin(hp[2]),co:dcTxt(hp[3]),ln:dcTxt(hp[4]),fn:dcTxt(hp[5]),mn:dcTxt(hp[6]),tr:dcTxt(hp[7]),a1:dcTxt(hp[8]),a2:dcTxt(hp[9]),
+      tot:{ex:dcNum(hp[10]),zr:dcNum(hp[11]),sv:dcNum(hp[12]),cg:dcNum(hp[13]),og:dcNum(hp[14]),vat:dcNum(hp[15]),cred:dcNum(hp[16])},rdo:hp[18],date:hp[19]}
+    :{tin:dcTin(hp[2]),co:dcTxt(hp[3]),ln:dcTxt(hp[4]),fn:dcTxt(hp[5]),mn:dcTxt(hp[6]),tr:dcTxt(hp[7]),a1:dcTxt(hp[8]),a2:dcTxt(hp[9]),
+      tot:{ex:dcNum(hp[10]),zr:dcNum(hp[11]),tx:dcNum(hp[12]),ov:dcNum(hp[13])},rdo:hp[14],date:hp[15]};
+  const recs=[],bad=[],need=P?17:15,nums=P?['ex','zr','sv','cg','og','iv']:['ex','zr','tx','ov'];
+  L.slice(1).forEach(({l,n})=>{
+    const p=csvLine(l).map(x=>x.trim());
+    if((p[0]||'').toUpperCase()!=='D'||(p[1]||'').toUpperCase()!==b){bad.push({n,why:'not a '+(P?'Purchases':'Sales')+' detail line (it should start with D,'+b+')',l});return}
+    if(p.length<need){bad.push({n,why:'has '+p.length+' fields, a detail line has '+need,l});return}
+    const t=dcTin(p[2]),r={src:n,tin:t?Number(t):null,tinRaw:t,tinOk:t.length===9,co:dcTxt(p[3]),ln:dcTxt(p[4]),fn:dcTxt(p[5]),mn:dcTxt(p[6]),a1:dcTxt(p[7]),a2:dcTxt(p[8]),ftin:dcTin(p[P?15:13]),date:p[P?16:14]};
+    for(let k=0;k<nums.length;k++){const v=dcNum(p[9+k]);if(isNaN(v)){bad.push({n,why:'the amount "'+p[9+k]+'" is not a number',l});return}r[nums[k]]=v}
+    recs.push(r);
+  });
+  // the header line holds the totals of the detail lines: they must agree
+  const sum=k=>r2(recs.reduce((x,r)=>x+r[k],0)),checks=[];
+  const chk=(label,hv,lv)=>checks.push({label,hv,lv,ok:!isNaN(hv)&&Math.abs(hv-lv)<=0.015});
+  if(P){chk('Exempt',h.tot.ex,sum('ex'));chk('Zero Rated',h.tot.zr,sum('zr'));chk('Services',h.tot.sv,sum('sv'));chk('Capital Goods',h.tot.cg,sum('cg'));
+    chk('Other than Capital Goods',h.tot.og,sum('og'));chk('Input VAT',h.tot.vat,sum('iv'));chk('Input VAT (creditable)',h.tot.cred,sum('iv'))}
+  else{chk('Exempt',h.tot.ex,sum('ex'));chk('Zero Rated',h.tot.zr,sum('zr'));chk('Taxable',h.tot.tx,sum('tx'));chk('Output VAT',h.tot.ov,sum('ov'))}
+  const notes=[],nBadTin=recs.filter(r=>!r.tinOk).length;
+  if(nBadTin)notes.push(nBadTin+' detail line(s) have a TIN that is not 9 digits.');
+  const nFiler=recs.filter(r=>r.ftin&&r.ftin!==h.tin).length;
+  if(nFiler)notes.push(nFiler+' detail line(s) carry a filer TIN that is not the one in the header line ('+h.tin+').');
+  const nDate=recs.filter(r=>r.date&&h.date&&r.date!==h.date).length;
+  if(nDate)notes.push(nDate+' detail line(s) have a period date that differs from the header line ('+h.date+').');
+  if(P){const nv=recs.filter(r=>Math.abs(r.iv-r2(r2(r.sv+r.cg+r.og)*12/100))>0.011).length;
+    if(nv)notes.push(nv+' detail line(s) have an Input VAT that is not 12% of Services + Capital Goods + Other Goods. The Excel template calculates its own Input VAT (12%), so those cells will differ from the DAT file.')}
+  return {kind:P?'P':'S',h,recs,bad,checks,notes};
+}
+function dcPeriod(){const m=/^(\d{2})\/\d{2}\/(\d{4})$/.exec((dc.h&&dc.h.date)||'');return m?{mm:m[1],yyyy:m[2],long:PER_LONG[+m[1]-1]+' '+m[2]}:null}
+function dcWho(){const h=dc.h;return h.co||[h.ln,h.fn,h.mn].filter(Boolean).join(', ')||'(no name)'}
+// Excel file: Purchases = your embedded Relief Purchases template (formatting and formulas kept); Sales = the template's 14 columns
+function dcBuild(){
+  const per=dcPeriod(),base=(dc.h.co||[dc.h.ln,dc.h.fn].filter(Boolean).join(' ')||dc.h.tin||'DAT').replace(/[^A-Za-z0-9]+/g,'_').replace(/^_+|_+$/g,'')||'DAT';
+  const tail=per?'_'+per.mm+per.yyyy:'';
+  if(dc.kind==='P')return {buf:buildXls(dc.recs,b64ToU8(TPL)),name:base+'_SLP'+tail+'.xls'};
+  const rows=dc.recs.map(r=>{
+    const vr=r.tx?(Math.abs(r.ov-r2(r.tx*12/100))<=0.011?12:r2(r.ov/r.tx*100)):12;       // 12, unless the DAT's output VAT says otherwise
+    return [r.tin,r.co,r.ln,r.fn,r.mn,r.a1,r.a2,r.ex,r.zr,r.tx,vr,r.ov,r2(r.ex+r.zr+r.tx),r2(r.tx+r.ov)];
+  });
+  const ws=XLSX.utils.aoa_to_sheet([SAF.map(f=>f.t),...rows]);
+  rows.forEach((r,i)=>{const R=i+2;
+    if(ws['A'+R])ws['A'+R].z='000000000';
+    'HIJLMN'.split('').forEach(c=>{if(ws[c+R])ws[c+R].z='#,##0.00'});
+    if(ws['K'+R])ws['K'+R].z='0.00';
+  });
+  ws['!cols']=[12,34,16,16,16,40,40,14,14,16,9,14,14,14].map(w=>({wch:w}));
+  const out=XLSX.utils.book_new();XLSX.utils.book_append_sheet(out,ws,'R_Sales');
+  return {buf:XLSX.write(out,{bookType:'biff8',type:'array'}),name:base+'_SLS'+tail+'.xls'};
+}
+function dcRender(){
+  const has=dc.recs.length>0,P=dc.kind==='P',bar=$('#dccardbar'),box=$('#dcfixbox');
+  $('#tn_dc').textContent=has?dc.recs.length+' lines':'';
+  $('#dldc').disabled=!has;
+  if(dc.err||!dc.h){
+    bar.hidden=true;$('#dcinfo').innerHTML=dc.err?'<span class="bad">'+esc(dc.err)+'</span>':'';
+    $('#dcfix').innerHTML='';$('#dcbad').innerHTML='';$('#dcprev').innerHTML='';$('#dcfixcount').textContent='';box.open=false;box.classList.remove('has');return;
+  }
+  const per=dcPeriod(),h=dc.h,T=h.tot;
+  const c=[['Type',P?'Relief Purchases':'Relief Sales'],['Filer',esc(dcWho())],['TIN',esc(h.tin)],['Period',per?per.long:'(no date)'],['Detail lines',dc.recs.length],['Exempt',fmt(T.ex)]];
+  if(T.zr)c.push(['Zero Rated',fmt(T.zr)]);
+  if(P)c.push(['Services',fmt(T.sv)],['Capital Goods',fmt(T.cg)],['Other Goods',fmt(T.og)],['Input VAT',fmt(T.vat)]);
+  else c.push(['Taxable',fmt(T.tx)],['Output VAT',fmt(T.ov)]);
+  $('#cards_dc').innerHTML=c.map(x=>cardHtml(x[0],x[1])).join('');bar.hidden=false;
+  $('#dcinfo').innerHTML='File <b>'+esc(dc.name)+'</b>: a <b>'+(P?'Relief Purchases':'Relief Sales')+'</b> DAT file. <b>'+dc.recs.length+'</b> detail lines will be written to the '+(P?'Relief Purchases (SLP)':'Relief Sales (SLS)')+' Excel template.'+
+    (dc.bad.length?' <span class="warn">'+dc.bad.length+' line(s) could not be read and are left out (see below).</span>':'')+
+    (P?'':' The DAT file does not carry totalSales and grossTaxable, so they are worked out: totalSales = exempt + zeroRated + taxable, grossTaxable = taxable + outputVat.');
+  // header totals vs the detail lines
+  let f='<tr><th>Check</th><th>Header line</th><th>Detail lines add up to</th><th></th></tr>';
+  dc.checks.forEach(k=>{f+='<tr><td>'+k.label+'</td><td class="num">'+(isNaN(k.hv)?'?':fmt(k.hv))+'</td><td class="num">'+fmt(k.lv)+'</td><td class="'+(k.ok?'okc':'bad')+'">'+(k.ok?'\u2713 matches':'\u2717 differs'+(isNaN(k.hv)?'':' by '+fmt(Math.abs(k.hv-k.lv))))+'</td></tr>'});
+  dc.notes.forEach(t=>{f+='<tr><td colspan="4" class="bad">'+esc(t)+'</td></tr>'});
+  $('#dcfix').innerHTML=f;
+  let b='';
+  if(dc.bad.length){
+    b='<tr><th>Line</th><th>Problem</th><th>Text</th></tr>';
+    dc.bad.slice(0,100).forEach(x=>{b+='<tr><td>'+x.n+'</td><td class="bad">'+esc(x.why)+'</td><td>'+esc(x.l.length>90?x.l.slice(0,90)+'\u2026':x.l)+'</td></tr>'});
+    if(dc.bad.length>100)b+='<tr><td colspan="3" style="color:var(--mute)">Showing the first 100 of '+dc.bad.length+' lines.</td></tr>';
+  }
+  $('#dcbad').innerHTML=b;
+  const problems=dc.checks.filter(k=>!k.ok).length+dc.notes.length+dc.bad.length;
+  $('#dcfixcount').textContent=problems?'('+problems+')':'(all fine)';
+  box.open=problems>0;box.classList.toggle('has',problems>0);
+  // preview
+  const nm=r=>r.co||[r.ln,r.fn,r.mn].filter(Boolean).join(', ');
+  const cols=P?[['ex','Exempt'],['zr','Zero Rated'],['sv','Services'],['cg','Capital Goods'],['og','Other Goods'],['iv','Input VAT']]:[['ex','Exempt'],['zr','Zero Rated'],['tx','Taxable'],['ov','Output VAT']];
+  let p='<tr><th>TIN</th><th>Name</th><th>Address 1</th><th>Address 2</th>'+cols.map(x=>'<th>'+x[1]+'</th>').join('')+'</tr>';
+  dc.recs.slice(0,5).forEach(r=>{p+='<tr><td'+(r.tinOk?'':' class="bad"')+'>'+esc(r.tinRaw)+'</td><td>'+esc(nm(r))+'</td><td>'+esc(r.a1)+'</td><td>'+esc(r.a2)+'</td>'+cols.map(x=>'<td class="num">'+fmt(r[x[0]])+'</td>').join('')+'</tr>'});
+  $('#dcprev').innerHTML=p;
+}
+function loadDat(file){
+  if(!file)return;
+  const rd=new FileReader();
+  rd.onerror=()=>msg('Could not read that file.',1);
+  rd.onload=e=>{
+    let out;try{out=dcParse(e.target.result)}catch(err){out={err:'That file could not be read as a DAT file.'}}
+    const open=$('#work').style.display==='block';
+    if(out.err){
+      if(!open){msg(out.err,1);return}      // nothing is open yet: the message shows under the drop box
+      Object.assign(dc,{name:file.name,kind:'',h:null,recs:[],bad:[],checks:[],notes:[],err:out.err});dcRender();setTab('dc');msg(out.err,1);return;
+    }
+    Object.assign(dc,{name:file.name,kind:out.kind,h:out.h,recs:out.recs,bad:out.bad,checks:out.checks,notes:out.notes,err:''});
+    if(!open){$('#work').style.display='block';$('#fname').textContent=file.name}   // no workbook open: the DAT file is "the file"
+    document.body.classList.add('loaded');
+    dcRender();setTab('dc');msg('');
+  };
+  rd.readAsText(file);
+}
+$('#t_dc').onclick=()=>setTab('dc');
+$('#dcfile').onchange=e=>{const f=e.target.files[0];e.target.value='';loadDat(f)};
+$('#dldc').onclick=()=>{
+  if(!dc.recs.length){msg('There is no DAT file to convert yet. Choose a DAT file first.',1);return}
+  try{
+    msg('Creating file...');
+    const o=dcBuild();saveXls(o.buf,o.name);
+    msg('Downloaded '+o.name+' ('+dc.recs.length+' rows) from '+dc.name+'.'+(dc.bad.length?' '+dc.bad.length+' line(s) could not be read and are not in the file.':''));
+  }catch(err){msg('Could not create the file: '+(err&&err.message||err),1)}
+};
+</script>
+<script>
+// ---- Start screen: the tabs are visible before any file is loaded, each with what to upload ----
+(function(){
+  const H={
+    rel:['Relief Purchases (SLP)','Upload your purchases workbook (.xlsx, .xls or .csv), or a Relief Purchases template that is already filled.','You get the Relief Purchases .xls and the SLP DAT file.'],
+    eq:['1601-EQ (QAP)','Upload a sheet with Month, TIN, payee name, ATC, amount and EWT rate (or the 1601-EQ template).','You get the 1601-EQ .xls, the QAP DAT file (or one per month) and 2307 certificates.'],
+    sa:['Relief Sales (SLS)','Upload the Relief Sales template (client_TIN, exempt, zeroRated, taxableNetofVat ...).','You get the Relief Sales .xls and the SLS DAT file.'],
+    aw:['SAWT','Upload your sheet of income payments withheld on: payor, TIN, total amount, CWT rate and ATC (or the SAWT template).','You get the SAWT DAT file for the return you pick (1702Q, 2550Q ...), or one per month, and the .xls.'],
+    dc:['DAT CONVERT','Upload a BIR DAT file (.dat) of Relief Purchases or Relief Sales.','You get it back as the Excel template.']
+  };
+  const box=document.getElementById('prehint');
+  function show(k){
+    document.querySelectorAll('#pretabs .tab').forEach(b=>{const on=b.dataset.pre===k;b.setAttribute('aria-selected',String(on));b.tabIndex=on?0:-1});
+    const h=H[k];box.innerHTML='<b>'+h[0]+'</b><span>'+h[1]+'</span><span>'+h[2]+'</span>';
+    window.preTab=k;
+  }
+  document.querySelectorAll('#pretabs .tab').forEach(b=>b.onclick=()=>show(b.dataset.pre));
+  document.getElementById('pretabs').addEventListener('keydown',e=>{
+    if(e.key!=='ArrowRight'&&e.key!=='ArrowLeft')return;e.preventDefault();
+    const K=Object.keys(H),i=K.indexOf(window.preTab),n=e.key==='ArrowRight'?Math.min(K.length-1,i+1):Math.max(0,i-1);show(K[n]);
+    document.querySelector('#pretabs .tab[data-pre="'+K[n]+'"]').focus();
+  });
+  show('rel');
+})();
+// when a file is chosen, the tab picked on the start screen opens first if the file fits it
+{const _l=layoutAfterLoad;layoutAfterLoad=function(){_l.apply(this,arguments);try{const k=window.preTab;
+  if(k&&k!=='rel'&&k!=='dc'&&({eq:eqHas,sa:saHas,aw:awHas})[k]())setTab(k)}catch(e){}}}
 </script>
 <script src="firebase-config.js"></script>
 <script src="cloud.js"></script>
