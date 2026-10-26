@@ -81,6 +81,7 @@ input:disabled,select:disabled{opacity:.5}
 
 [hidden]{display:none!important}
 body.loaded .drop,body.loaded #msg,body.loaded #pretabs{display:none}
+.mosel{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}.mosel button{font:inherit;padding:2px 10px}
 .prehint{margin:-4px 0 14px;padding:12px 14px;border:1px solid var(--pageline);border-radius:8px;font-size:14px;line-height:1.5}.prehint b{display:block;margin-bottom:2px}.prehint span{display:block;opacity:.85}
 #msg{margin-top:10px}
 #msg:empty{display:none}
@@ -272,7 +273,7 @@ dialog#perdlg::backdrop{background:rgba(0,0,0,.5)}
   <div class="status" id="moinfo" hidden></div>
   <details class="sec" id="fixbox"><summary>Needs fixing <span id="fixcount" class="cnt"></span></summary><div class="in">
    <div class="note"><label><input type="checkbox" id="fixall"> Show all rows</label>
-    <span style="color:var(--mute)"> Fix a blank or wrong TIN, name or address here. Changes are used in both the .xls and the DAT file, and a fixed TIN or name is also fixed in the 1601-EQ when both tabs use the same sheet.</span> <button type="button" class="tin9" data-kind="p" title="Pad short TINs with leading zeros and cut long TINs to the first 9 digits">Force TIN to 9 digits</button></div>
+    <span style="color:var(--mute)"> Fix a blank or wrong TIN, name or address here. Changes are used in both the .xls and the DAT file, and a fixed TIN or name is also fixed in the 1601-EQ when both tabs use the same sheet.</span> <button type="button" class="addr0" data-kind="p" title="Put 0 in every blank Address 1 / Address 2">Fill blank addresses with 0</button> <button type="button" class="tin9" data-kind="p" title="Pad short TINs with leading zeros and cut long TINs to the first 9 digits">Force TIN to 9 digits</button></div>
    <div class="scroll"><table id="fix"></table></div></div></details>
   <details class="sec"><summary>Preview (first 5 rows)</summary><div class="in scroll"><table id="prev"></table></div></details>
   <details class="sec"><summary>Advanced: column mapping</summary><div class="in scroll"><table id="map"></table></div></details>
@@ -295,7 +296,7 @@ dialog#perdlg::backdrop{background:rgba(0,0,0,.5)}
    <div class="cardbar"><div class="cards" id="cards_sa"></div><button id="sasumbtn" type="button">Full summary</button></div>
    <div class="status" id="sainfo"></div>
    <details class="sec" id="safixbox"><summary>Needs fixing <span id="safixcount" class="cnt"></span></summary><div class="in">
-    <div class="note" style="color:var(--mute)">Fix these in your Relief Sales template and load it again, or fix the TINs here. <button type="button" class="tin9" data-kind="sa" title="Pad short TINs with leading zeros and cut long TINs to the first 9 digits">Force TIN to 9 digits</button></div>
+    <div class="note" style="color:var(--mute)">Fix these in your Relief Sales template and load it again, or fix the TINs here. <button type="button" class="addr0" data-kind="sa" title="Put 0 in every blank Address 1 / Address 2">Fill blank addresses with 0</button> <button type="button" class="tin9" data-kind="sa" title="Pad short TINs with leading zeros and cut long TINs to the first 9 digits">Force TIN to 9 digits</button></div>
     <div class="scroll"><table id="safix"></table></div></div></details>
    <details class="sec"><summary>Preview (first 5 rows)</summary><div class="in scroll"><table id="saprev"></table></div></details>
   </section>
@@ -1154,7 +1155,7 @@ function saveXls(buf,name){
     const bad=eq.recs.filter(r=>eqProbs(r).length).length;
     if(bad&&!confirm(bad+' row(s) have a missing or wrong TIN, name, month, ATC or rate. Download the 1601-EQ files anyway?'))return;
     const Y=+$('#eqyear').value||new Date().getFullYear(),by={};let skipped=0;
-    eq.recs.forEach(r=>{if(!r.mo){skipped++;return}const y=r.yr||Y,k=y*100+r.mo;(by[k]=by[k]||[]).push({...r,ds:monthEnd(y,r.mo)})});
+    eq.recs.forEach(r=>{if(!r.mo){skipped++;return}const y=r.yr||Y,k=y*100+r.mo;if(moOff.has(k))return;(by[k]=by[k]||[]).push({...r,ds:monthEnd(y,r.mo)})});
     const ks=Object.keys(by).map(Number).sort((a,b)=>a-b);
     if(!ks.length){msg('No row has a readable month, so no 1601-EQ file was made.',1);return}
     try{
@@ -1210,7 +1211,7 @@ function showEqSummary(){
   if(!rows.length)return false;
   const left=eq.recs.length-rows.length,tx=r=>r2(r.am*r.rt/100);   // tax_amount = ROUND(income x rate / 100, 2) per row, as in the template
   const sum=a=>({n:a.length,inc:a.reduce((t,r)=>r2(t+r.am),0),tax:a.reduce((t,r)=>r2(t+tx(r)),0)});
-  const sp=typeof eqMonths==='function'?eqMonths():{months:[]},tbl=$('#sumtbl'),txt=$('#sumtxt');
+  const sp=typeof eqMonthsAll==='function'?eqMonthsAll():{months:[]},tbl=$('#sumtbl'),txt=$('#sumtxt');
   if(sp.months.length>=2){      // 2 or more months: one column per month and a Total column, the same as the Relief summary
     const S=sp.months.map(x=>sum(x.recs)),T=sum(sp.months.flatMap(x=>x.recs));
     let h='<table><tr><th></th>'+sp.months.map(x=>'<th class="num">'+PER_LONG[x.m-1]+' '+x.y+'</th>').join('')+'<th class="num tot">Total</th></tr>';
@@ -1274,6 +1275,7 @@ function saRecs(a,hr,map,gap){
   return recs;
 }
 const saProbs=r=>{const p=[];if(isSelf(r))p.push(SELFMSG);if(!r.tinOk)p.push(r.tin==null?'No TIN':'TIN not 9 digits');if(!(r.co||r.ln||r.fn))p.push('No name');
+  if(!r.a1&&!r.a2)p.push('No address');else{if(!r.a1)p.push('No address 1');if(!r.a2)p.push('No address 2')}
   if(Math.abs(r.ts-r2(r.ex+r.zr+r.tx))>0.015)p.push('totalSales is not exempt + zeroRated + taxable');return p};
 const saHas=()=>sa.hr>=0&&sa.recs.length>0;
 function saSummarize(recs){
@@ -1296,7 +1298,7 @@ function saUse(n){
 }
 function saRecompute(){
   sa.recs=sa.hr>=0?saRecs(sa.aoa,sa.hr,sa.map,$('#gap').checked):[];
-  sa.recs.forEach(r=>{const e=saEdits[r.src];if(e){r.tin=e.tin?Number(e.tin):null;r.tinOk=e.tin.length===9}});
+  sa.recs.forEach(r=>{const e=saEdits[r.src];if(e){if(e.tin!=null){r.tin=e.tin?Number(e.tin):null;r.tinOk=e.tin.length===9}if(e.a1!=null)r.a1=e.a1;if(e.a2!=null)r.a2=e.a2}});
   const bad=sa.recs.filter(r=>saProbs(r).length).length,miss=sa.hr>=0?SAF.filter((f,i)=>sa.map[i]<0).map(f=>f.t):[];
   $('#sainfo').innerHTML=sa.hr<0?'<span class="bad">No Relief Sales template (client_TIN, exempt, zeroRated, taxableNetofVat...) was found on this sheet. Choose another sheet or load the Relief Sales template.</span>':
     'Relief Sales template found, header on row '+(sa.hr+1)+'. <b>'+sa.recs.length+'</b> rows will be written.'+
@@ -1350,7 +1352,9 @@ function outName(code,mm,yyyy){
 $('#dlsa').onclick=()=>{
   if(!saHas()){msg('There are no Relief Sales rows to write.',1);return}
   try{
-    const out=XLSX.utils.book_new();XLSX.utils.book_append_sheet(out,wb.Sheets[$('#sasheet').value],'R_Sales');
+    const ws=wb.Sheets[$('#sasheet').value];
+    sa.recs.forEach(r=>{const e=saEdits[r.src];if(!e)return;['a1','a2'].forEach(k=>{const c=sa.map[SAI[k]];if(e[k]!=null&&c>=0)ws[XLSX.utils.encode_cell({r:r.src,c})]={t:'s',v:e[k]}})});      // blank addresses filled with 0
+    const out=XLSX.utils.book_new();XLSX.utils.book_append_sheet(out,ws,'R_Sales');
     const buf=XLSX.write(out,{bookType:'biff8',type:'array'}),my=perMY(),name=outName('SLS',my[0],my[1]);
     saveXls(buf,name);msg('Downloaded '+name+' for '+perInfo().long+'.');
   }catch(err){msg('Could not create the file: '+(err&&err.message||err),1)}
@@ -1465,7 +1469,8 @@ function awRecompute(){
   document.querySelectorAll('#awmap select').forEach(x=>{x.value=String(aw.map[+x.dataset.i]);x.onchange=()=>{aw.map[+x.dataset.i]=+x.value;savePref('aw',EQF,+x.dataset.i,+x.value,hdr,awMapFor(hdr));awRecompute()}});
   renderCards();
 }
-function awMonths(){
+function awMonths(){return moFilter(awMonthsAll())}
+function awMonthsAll(){
   const out={months:[],skipped:0};
   if(!awHas())return out;
   const Y=+perMY()[1],by=new Map();
@@ -2165,9 +2170,11 @@ function moSplit(aoa,hr,recs,fallbackYear){
   out.months=[...by.values()].sort((a,b)=>a.k-b.k);
   return out;
 }
-function moNow(){return moSplit(aoa,hr,res.recs,+perMY()[1])}
+function moNowAll(){return moSplit(aoa,hr,res.recs,+perMY()[1])}
+function moNow(){return moFilter(moNowAll())}
 // 1601-EQ rows grouped by month (year from the row, else the year box)
-function eqMonths(){
+function eqMonths(){return moFilter(eqMonthsAll())}
+function eqMonthsAll(){
   const out={months:[],skipped:0};
   if(typeof eq==='undefined'||!eq.recs.length)return out;
   const Y=+$('#eqyear').value||new Date().getFullYear(),by=new Map();
@@ -2183,7 +2190,7 @@ function eqMonths(){
 window.monthUI=function(){
   const box=$('#moinfo'),btn=$('#genm');
   const isEq=typeof tab!=='undefined'&&tab==='eq',isAw=typeof tab!=='undefined'&&tab==='aw';
-  const sp=isEq?eqMonths():isAw?awMonths():(typeof tab!=='undefined'&&tab==='rel'&&hr>=0)?moNow():{months:[],skipped:0};
+  const sp=isEq?eqMonthsAll():isAw?awMonthsAll():(typeof tab!=='undefined'&&tab==='rel'&&hr>=0)?moNowAll():{months:[],skipped:0};
   const on=sp.months.length>=2;
   if(isEq)$('#dleq').textContent=on?'Download '+sp.months.length+' .xls files (one per month)':'Download .xls';      // it makes one 1601-EQ .xls for each month
   btn.hidden=!on;box.hidden=!on;$('#dlm').hidden=!on||isEq;
@@ -2258,7 +2265,7 @@ $('#dlm').onclick=()=>{
 };
 // Full summary: with 2 or more months the pop-up shows one column per month and a Total column
 window.monthSummary=function(){
-  const tbl=$('#sumtbl'),txt=$('#sumtxt'),sp=moNow();
+  const tbl=$('#sumtbl'),txt=$('#sumtxt'),sp=moNowAll();
   if(sp.months.length<2){tbl.hidden=true;txt.hidden=false;return}
   const S=sp.months.map(x=>summarize(x.recs)),T=summarize(sp.months.flatMap(x=>x.recs));
   const M=[['Total Exempt','ex'],['Total Zero Rated','zr'],['Total Services','sv'],['Total Capital Goods','cg'],
@@ -2470,6 +2477,57 @@ $('#dldc').onclick=()=>{
 // when a file is chosen, the tab picked on the start screen opens first if the file fits it
 {const _l=layoutAfterLoad;layoutAfterLoad=function(){_l.apply(this,arguments);try{const k=window.preTab;
   if(k&&k!=='rel'&&k!=='dc'&&({eq:eqHas,sa:saHas,aw:awHas})[k]())setTab(k)}catch(e){}}}
+</script>
+<script>
+// ---- "Fill blank addresses with 0": every blank Address 1 / Address 2 becomes 0 (Relief Purchases and Relief Sales, the forms that carry an address) ----
+document.addEventListener('click',e=>{
+  const b=e.target.closest&&e.target.closest('.addr0');if(!b)return;
+  const sales=b.dataset.kind==='sa',L=sales?sa.recs:(typeof res!=='undefined'?res.recs:[]),ED=sales?saEdits:edits;
+  let n=0;
+  L.forEach(r=>{
+    const ch={};
+    if(!r.a1)ch.a1='0';
+    if(!r.a2)ch.a2='0';
+    if(ch.a1||ch.a2){Object.assign(ED[r.src]=ED[r.src]||{},ch);n++}
+  });
+  if(!n){msg('No blank address found.');return}
+  if(sales)saRecompute();else recompute();
+  msg(n+' row(s) now have 0 in their blank address.');
+});
+</script>
+<script>
+// ---- Choose which months to make (a 12-month journal, but only 3 months wanted) ----
+// Every month is ticked by default. Un-tick a month and the per-month buttons (DAT and .xls) skip it.
+const moOff=new Set();      // keys year*100+month that are un-ticked
+function moFilter(sp){return {months:sp.months.filter(x=>!moOff.has(x.k)),skipped:sp.skipped}}
+{
+  const _m=window.monthUI;
+  window.monthUI=function(){
+    _m.apply(this,arguments);
+    const box=$('#moinfo'),isEq=tab==='eq',isAw=tab==='aw';
+    if(box.hidden)return;
+    const all=isEq?eqMonthsAll():isAw?awMonthsAll():moNowAll(),n=all.months.filter(x=>!moOff.has(x.k)).length;
+    let h='<div class="mosel" role="group" aria-label="Months to make"><b>Months to make:</b> '+
+      all.months.map(x=>'<label class="chk"><input type="checkbox" class="mopick" data-k="'+x.k+'"'+(moOff.has(x.k)?'':' checked')+'> '+PER_LONG[x.m-1].slice(0,3)+' '+x.y+' <small>('+x.recs.length+')</small></label>').join(' ')+
+      ' <button type="button" class="moall" data-v="1">All</button> <button type="button" class="moall" data-v="0">None</button></div>';
+    box.insertAdjacentHTML('beforeend',h);
+    const word=n+' DAT file'+(n===1?'':'s')+' (one per month)';
+    $('#genm').textContent='Generate '+word;$('#genm').disabled=n===0;
+    $('#dlm').textContent='Download '+n+' .xls file'+(n===1?'':'s')+' (one per month)';$('#dlm').disabled=n===0;
+    if(isEq)$('#dleq').textContent='Download '+n+' .xls file'+(n===1?'':'s')+' (one per month)';
+  };
+}
+document.addEventListener('change',e=>{
+  const t=e.target;if(!t.classList||!t.classList.contains('mopick'))return;
+  if(t.checked)moOff.delete(+t.dataset.k);else moOff.add(+t.dataset.k);
+  window.monthUI();
+});
+document.addEventListener('click',e=>{
+  const b=e.target.closest&&e.target.closest('.moall');if(!b)return;
+  const all=tab==='eq'?eqMonthsAll():tab==='aw'?awMonthsAll():moNowAll();
+  all.months.forEach(x=>{if(b.dataset.v==='1')moOff.delete(x.k);else moOff.add(x.k)});
+  window.monthUI();
+});
 </script>
 <script src="firebase-config.js"></script>
 <script src="cloud.js"></script>
