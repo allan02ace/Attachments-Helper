@@ -282,6 +282,7 @@ dialog#perdlg::backdrop{background:rgba(0,0,0,.5)}
  <section id="tab_eq" role="tabpanel" aria-labelledby="t_eq" hidden>
   <div class="cardbar"><div class="cards" id="cards_eq"></div><button id="eqsumbtn" type="button">Full summary</button></div>
   <div class="status" id="eqinfo"></div>
+  <label class="chk" style="margin:4px 2px 8px"><input type="checkbox" id="eqcons" checked> Add up the same supplier + ATC into one row in each month's .xls (the tax is then worked out on the total, e.g. 40,000.00 at 1% = 400.00)</label>
   <details class="sec" id="eqfixbox"><summary>Needs fixing <span id="eqfixcount" class="cnt"></span></summary><div class="in">
    <div class="note" style="color:var(--mute)">Fix these in your file and load it again, or fix the TINs here. <button type="button" class="tin9" data-kind="eq" title="Pad short TINs with leading zeros and cut long TINs to the first 9 digits">Force TIN to 9 digits</button></div>
    <div class="scroll"><table id="eqfix"></table></div></div></details>
@@ -1159,30 +1160,44 @@ function saveXls(buf,name){
     const ks=Object.keys(by).map(Number).sort((a,b)=>a-b);
     if(!ks.length){msg('No row has a readable month, so no 1601-EQ file was made.',1);return}
     try{
-      const base=fname.replace(/\.[^.]+$/,'').replace(/[^A-Za-z0-9_-]+/g,'_'),files=ks.map(k=>[buildEqXls(by[k],b64ToU8(TPL2)),outName('QAP',String(k%100).padStart(2,'0'),String(Math.floor(k/100)))]);
+      const base=fname.replace(/\.[^.]+$/,'').replace(/[^A-Za-z0-9_-]+/g,'_'),files=ks.map(k=>[buildEqXls(eqConsolidate(by[k]),b64ToU8(TPL2)),outName('QAP',String(k%100).padStart(2,'0'),String(Math.floor(k/100)))]);
       files.forEach((f,i)=>setTimeout(()=>saveXls(f[0],f[1]),i*400));
       msg('Downloading '+files.length+' 1601-EQ file(s), one per month.'+(skipped?' '+skipped+' row(s) without a month were left out.':''));
     }catch(err){msg('Could not create the 1601-EQ file: '+(err&&err.message||err),1)}
   };
 }
 
+// ---- 1601-EQ template: the same supplier + ATC in a month is ONE row, so its tax_amount is worked out on the total ----
+// (row by row, 6 transactions of one supplier that total 40,000.00 at 1% each round on their own and add up to 399.99; on the total it is 400.00)
+function eqConsolidate(recs){
+  const c=document.getElementById('eqcons');
+  if(!c||!c.checked)return recs;
+  const g=new Map();
+  recs.forEach(r=>{
+    const k=[String(r.tin==null?'':r.tin).padStart(9,'0'),String(r.br),r.atc,r.co,r.ln,r.fn,r.mn,r.rt].join('|'),x=g.get(k);
+    if(x)x.am=r2(x.am+r.am);else g.set(k,Object.assign({},r));
+  });
+  return [...g.values()];
+}
+try{const c=document.getElementById('eqcons');if(c){c.checked=localStorage.getItem('reliefEqCons')!=='0';c.addEventListener('change',()=>{try{localStorage.setItem('reliefEqCons',c.checked?'1':'0')}catch(e){}if(window.renderCards)renderCards()})}}catch(e){}
+
 // ---- QAP 1601EQ DAT file ----
 // Header: HQAP,H1601EQ,TIN,branch,".",MM/YYYY,RDO   Detail: D1,1601EQ,seq,TIN,branch,names...,MM/YYYY,ATC,rate,income,tax   Control: C1,...,totals
 function buildQapDat(recs,f,Y){
   const q=s=>'"'+s+'"',n2=v=>r2(v).toFixed(2),per=f.mm+'/'+f.yyyy;
   // One line per payee + branch + ATC + names (+ rate): the amounts of all rows (all months of the quarter) are added up,
-  // and every line carries the Reporting Period month. Tax = sum of each row's ROUND(income x rate / 100, 2), same as the template's tax_amount.
+  // and every line carries the Reporting Period month. Tax = ROUND(TOTAL income of the line x rate / 100, 2), so 5 transactions of 40,000 at 1% give 400.00, not 399.99.
   const g=new Map();
   recs.forEach(r=>{
     const t9=String(r.tin==null?'':r.tin).padStart(9,'0'),br=String(r.br).padStart(4,'0'),k=[t9,br,r.atc,r.co,r.ln,r.fn,r.mn,r.rt].join('|');
-    const tx=r2(r.am*r.rt/100),x=g.get(k);   // tax_amount of each row = ROUND(income_payment*ewt_rate/100,2), as in the template; a line adds up its rows' tax
-    if(x){x.am=r2(x.am+r.am);x.tx=r2(x.tx+tx)}else g.set(k,{t9,br,co:r.co,ln:r.ln,fn:r.fn,mn:r.mn,atc:r.atc,rt:r.rt,am:r2(r.am),tx});
+    const x=g.get(k);
+    if(x)x.am=r2(x.am+r.am);else g.set(k,{t9,br,co:r.co,ln:r.ln,fn:r.fn,mn:r.mn,atc:r.atc,rt:r.rt,am:r2(r.am)});
   });
   const rows=[...g.values()].sort((a,b)=>a.t9<b.t9?-1:a.t9>b.t9?1:0);   // by payee TIN; ties keep file order
   let si=0,st=0;
   const L=['HQAP,H1601EQ,'+f.tin+','+f.br+',".",'+per+','+f.rdo.padStart(3,'0')];
   rows.forEach((r,i)=>{
-    const tax=r.tx;si=r2(si+r.am);st=r2(st+tax);
+    const tax=r2(r.am*r.rt/100);si=r2(si+r.am);st=r2(st+tax);
     L.push(['D1','1601EQ',i+1,r.t9,r.br,q(r.co),q(r.ln),q(r.fn),q(r.mn),per,r.atc,n2(r.rt),n2(r.am),n2(tax)].join(','));
   });
   L.push(['C1','1601EQ',f.tin,f.br,per,n2(si),n2(st)].join(','));
@@ -1210,10 +1225,10 @@ function showEqSummary(){
   const rows=eq.recs.filter(r=>r.mo);
   if(!rows.length)return false;
   const left=eq.recs.length-rows.length,tx=r=>r2(r.am*r.rt/100);   // tax_amount = ROUND(income x rate / 100, 2) per row, as in the template
-  const sum=a=>({n:a.length,inc:a.reduce((t,r)=>r2(t+r.am),0),tax:a.reduce((t,r)=>r2(t+tx(r)),0)});
+  const sum=a=>({n:a.length,inc:a.reduce((t,r)=>r2(t+r.am),0),tax:eqConsolidate(a).reduce((t,r)=>r2(t+tx(r)),0)});      // tax on the same basis as the template rows
   const sp=typeof eqMonthsAll==='function'?eqMonthsAll():{months:[]},tbl=$('#sumtbl'),txt=$('#sumtxt');
   if(sp.months.length>=2){      // 2 or more months: one column per month and a Total column, the same as the Relief summary
-    const S=sp.months.map(x=>sum(x.recs)),T=sum(sp.months.flatMap(x=>x.recs));
+    const S=sp.months.map(x=>sum(x.recs)),T={n:S.reduce((t,v)=>t+v.n,0),inc:S.reduce((t,v)=>r2(t+v.inc),0),tax:S.reduce((t,v)=>r2(t+v.tax),0)};
     let h='<table><tr><th></th>'+sp.months.map(x=>'<th class="num">'+PER_LONG[x.m-1]+' '+x.y+'</th>').join('')+'<th class="num tot">Total</th></tr>';
     h+='<tr><td>Rows</td>'+S.map(v=>'<td class="num">'+v.n+'</td>').join('')+'<td class="num tot">'+T.n+'</td></tr>';
     h+='<tr><td>Total Income Payment Schedule 1</td>'+S.map(v=>'<td class="num">'+fmt(v.inc)+'</td>').join('')+'<td class="num tot">'+fmt(T.inc)+'</td></tr>';
@@ -1939,11 +1954,13 @@ setTab('rel');
       let x=g.get(k);if(!x){x={key:k,tin:t9,br,name:nameOf(r),lines:new Map(),bad:false,inc:0,tax:0};g.set(k,x)}
       if(!x.name)x.name=nameOf(r);
       if(!x.bad&&eqProbs(r).length)x.bad=true;
-      const col=(r.mo-1)%3,tx=r2(r.am*r.rt/100);
-      let L=x.lines.get(r.atc);if(!L){L={atc:r.atc,am:[0,0,0],tx:[0,0,0]};x.lines.set(r.atc,L)}
-      L.am[col]=r2(L.am[col]+r.am);L.tx[col]=r2(L.tx[col]+tx);
-      x.inc=r2(x.inc+r.am);x.tax=r2(x.tax+tx);
+      const col=(r.mo-1)%3;
+      let L=x.lines.get(r.atc);if(!L){L={atc:r.atc,rt:r.rt,am:[0,0,0],tx:[0,0,0]};x.lines.set(r.atc,L)}
+      L.am[col]=r2(L.am[col]+r.am);
+      x.inc=r2(x.inc+r.am);
     });
+    // tax withheld = ROUND(income of the month x rate / 100, 2) on the month's TOTAL for that ATC, not row by row
+    g.forEach(x=>{x.tax=0;x.lines.forEach(L=>{for(let c=0;c<3;c++){L.tx[c]=r2(L.am[c]*L.rt/100);x.tax=r2(x.tax+L.tx[c])}})});
     const list=[...g.values()].sort((a,b)=>(a.name||'~').toUpperCase().localeCompare((b.name||'~').toUpperCase()));
     return {list,Q,skipped:eq.recs.length-used.length};
   }
