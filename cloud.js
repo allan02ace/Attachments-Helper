@@ -1,4 +1,4 @@
-// Google sign-in + saving the filer profiles to the user's own Firestore document (users/{uid}).
+// Google sign-in + saving the filer profiles to the user's own Firestore document (birdat_users/{uid}).
 // Without a filled-in firebase-config.js the app works exactly as before (profiles stay in this browser).
 (function(){
   var cfg=window.FIREBASE_CONFIG,btn=document.getElementById('login');
@@ -9,8 +9,8 @@
   var say=function(t,bad){if(typeof msg==='function')msg(t,bad)};
   function load(src){return new Promise(function(res,rej){var s=document.createElement('script');s.src=src;s.onload=res;s.onerror=function(){rej(new Error('Could not load '+src))};document.head.appendChild(s)})}
   function label(){
-    if(user){var n=(user.displayName||user.email||'').split(' ')[0];btn.textContent='Log out'+(n?' ('+n+')':'');btn.title='Signed in as '+(user.email||n)+'. Filer profiles are saved to your account.'}
-    else{btn.textContent='Log in';btn.title='Sign in with Google to save your filer profiles to your account'}
+    if(user){var n=(user.displayName||user.email||'').split(' ')[0];btn.textContent='Log out'+(n?' ('+n+')':'');btn.title='Signed in as '+(user.email||n)+'. Saved filer profiles, including tax and address details, are synced to your account. Workbooks and generated files stay in this browser.'}
+    else{btn.textContent='Log in';btn.title='Sign in with Google to sync saved filer profiles, including tax and address details. Workbooks and generated files stay in this browser.'}
   }
   function start(){
     if(starting)return starting;
