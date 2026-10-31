@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#f5f7f3">
+<meta name="theme-color" content="#0e1612">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -190,113 +190,12 @@ dialog#perdlg::backdrop{background:rgba(0,0,0,.5)}
 .dcbox span{color:var(--mute);font-size:13px}
 .dcbox input{position:absolute;opacity:0;width:1px;height:1px}
 .tab-dc .xfields,.tab-dc #awforms,.tab-dc #gen,.tab-dc #genm{display:none!important}
-/* Calm, premium finance-tool visual layer */
-:root{color-scheme:light;--bg:#f5f7f3;--panel:#fff;--field:#fbfcfa;--ink:#172a21;--mute:#68776e;--line:#dce5de;--head:#f2f6f2;--acc:#176b4b;--acc-ink:#fff;--accx:#a85a33;--focus:#a85a33;--warn:#94630c;--bad:#b43f44;--ok:#27764f;--pageink:#172a21;--pageline:#dce5de}
-body{background:linear-gradient(180deg,#fff,#f5f7f3 290px);color:var(--ink)}
-main{max-width:1180px;padding-left:24px;padding-right:24px}
-h1{font-size:25px;letter-spacing:-.035em}.logo{border-radius:11px;box-shadow:0 2px 8px #1432231f}
-.top{background:#f7f9f6f0;border-color:var(--line);backdrop-filter:blur(12px);padding:16px 0 13px;margin-bottom:14px}
-.login{color:var(--acc);border-color:#bbcec1}.login:hover{background:var(--acc);color:#fff;border-color:var(--acc)}
-.privacy-note{display:flex;align-items:center;gap:9px;margin:-2px 0 22px;color:var(--mute);font-size:12px}.privacy-dot{width:7px;height:7px;flex:none;border-radius:50%;background:var(--acc)}
-button,select{color:var(--ink);background:#fff;border-color:var(--line);border-radius:8px;transition:all .16s ease}button:hover{border-color:#9cb6a5}button.primary{background:var(--acc);border-color:var(--acc);color:#fff;box-shadow:0 2px 5px #176b4b24}button.primary:hover{background:#10583d;border-color:#10583d;filter:none}
-button:focus-visible,select:focus-visible{outline:3px solid #a85a3355;outline-offset:2px}
-#pretabs .tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:0 0 14px;border:0}
-#pretabs .tab{display:flex;flex-direction:column;align-items:flex-start;gap:9px;min-height:78px;margin:0;padding:14px 16px;background:#fff;border:1px solid var(--line);border-radius:12px;color:var(--ink);text-align:left;opacity:1;box-shadow:0 2px 5px #1c362706}
-#pretabs .tab::before{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--mute)}
-#pretabs .tab[data-pre=rel]::before{content:"01 · PURCHASES"}#pretabs .tab[data-pre=eq]::before{content:"02 · WITHHOLDING"}#pretabs .tab[data-pre=sa]::before{content:"03 · SALES"}#pretabs .tab[data-pre=aw]::before{content:"04 · TAX SUMMARY"}#pretabs .tab[data-pre=dc]::before{content:"05 · CONVERSION"}
-#pretabs .tab:hover{border-color:#9cb6a5;transform:translateY(-1px)}#pretabs .tab[aria-selected=true]{background:#f4f8f4;border-color:#9eb9a6;box-shadow:inset 0 0 0 1px #9eb9a6,0 4px 12px #1d4d320f;color:#155a3e}
-#pretabs .prehint{margin:0 0 14px;padding:13px 16px;background:#fff;border:1px solid var(--line);border-radius:10px;color:var(--mute)}#pretabs .prehint b{color:var(--ink);font-size:14px}#pretabs .prehint span+span{color:var(--acc);font-weight:600}
-.drop{position:relative;border:1.5px dashed #a9c0ae;border-radius:14px;background:#ffffffd9;padding:42px 18px;box-shadow:0 4px 16px #1d402b09;transition:all .16s ease}.drop:hover,.drop.over{border-color:var(--acc);background:#fff;box-shadow:0 8px 24px #1d402b14}.drop b{font-size:19px;color:var(--ink)}.drop::after{content:"Excel workbooks, CSV files, or BIR DAT files · Processed locally in your browser";display:block;margin-top:7px;color:var(--mute);font-size:13px}
-.strip,.hub,.panel,details.sec,.card,.cardnone,#msg:not(:empty),.status:not(:empty){background:var(--panel);border-color:var(--line);box-shadow:0 2px 8px #1a372508}.hub{border-radius:12px}.hub .strip{box-shadow:none}.panel h2{background:var(--head);border-color:var(--line)}
-#work>.tabs{gap:5px;overflow-x:auto;overscroll-behavior-inline:contain;border-color:var(--line)}#work>.tabs .tab{padding:10px 15px;color:var(--mute);white-space:nowrap}#work>.tabs .tab[aria-selected=true]{background:#fff;border-color:var(--line);color:var(--acc);box-shadow:inset 0 2px var(--acc),0 2px 6px #1a37250a}
-.card,details.sec{border-radius:11px}.card .v{color:var(--ink);font-variant-numeric:tabular-nums}
-th,td{border-color:#e5ebe6;padding:8px 11px}th{background:#f2f6f2;color:#33483b;font-size:11px;letter-spacing:.04em;text-transform:uppercase}tbody tr:nth-child(even){background:#fafcf9}tbody tr:hover{background:#f2f7f2}
-td select,fieldset input,fieldset select,.rep input,.rep select,.pf select,.pf input,.xfields input,.xfields select{background:#fff;border-color:#d6e1d9;border-radius:7px}fieldset{border-color:var(--line);border-radius:10px}legend{color:#30483a}
-#xbar{position:sticky;bottom:0;z-index:20;background:#fffffff7;border:1px solid #d7e2d9;border-top:2px solid #b9cdbd;border-bottom:0;border-radius:13px 13px 0 0;margin:18px 0 0;padding:13px 16px;box-shadow:0 -8px 24px #1c37251a;backdrop-filter:blur(12px)}#xbar .xfields input,#xbar .xfields select,#xbar button:not(.primary){background:#fff;border-color:#d6e1d9}.xfields label{color:#516257;opacity:1}
-#sum,#d2307,#perdlg{background:#fff;color:var(--ink);border-color:var(--line);border-radius:14px;box-shadow:0 20px 60px #1025192e}#sum h2,#perdlg h2{background:var(--head);border-color:var(--line)}
-@media(max-width:900px){#pretabs .tabs{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(max-width:700px){main{padding-left:15px;padding-right:15px}.top{padding-top:12px}h1{font-size:20px}.privacy-note{align-items:flex-start;font-size:11px}#pretabs .tabs{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#pretabs .tab{min-height:70px;padding:11px 12px}#work>.tabs{scroll-snap-type:x proximity}#work>.tabs .tab{scroll-snap-align:start;padding:9px 12px}#xbar{position:static;background:#fff;box-shadow:0 2px 10px #1c37250f;border:1px solid var(--line);border-top:2px solid #b9cdbd;border-radius:12px;margin-bottom:16px}.drop{padding:32px 15px}}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
-.head-actions{display:flex;align-items:center;gap:8px}
-.theme-toggle{display:inline-flex;align-items:center;gap:7px;background:#fff;color:#42564a;border:1px solid #dce5de;border-radius:999px;padding:7px 12px;font-size:13px;font-weight:600}
-.theme-toggle:hover{background:#f2f6f2;border-color:#9cb6a5}
-.theme-toggle>span:first-child{font-size:16px;line-height:1}
-:root[data-theme="dark"]{color-scheme:dark;--bg:#111a15;--panel:#1b2820;--field:#121c16;--ink:#edf3ec;--mute:#a2b3a7;--line:#35483b;--head:#24332a;--acc:#79c99c;--acc-ink:#102117;--accx:#f0a477;--focus:#f0a477;--warn:#f0ca64;--bad:#ff858b;--ok:#83d5a0;--pageink:#edf3ec;--pageline:#35483b}
-:root[data-theme="dark"] body{background:linear-gradient(180deg,#17221b,#111a15 290px);color:var(--ink)}
-:root[data-theme="dark"] .top{background:#121c17ed;border-color:var(--line)}
-:root[data-theme="dark"] .login{color:var(--ink);border-color:#506657}
-:root[data-theme="dark"] .login:hover{background:var(--ink);color:var(--bg)}
-:root[data-theme="dark"] .theme-toggle{background:#1b2820;color:var(--ink);border-color:#405448}
-:root[data-theme="dark"] .theme-toggle:hover{background:#24332a;border-color:#6d8c77}
-:root[data-theme="dark"] button,:root[data-theme="dark"] select{background:var(--panel);color:var(--ink);border-color:var(--line)}
-:root[data-theme="dark"] button.primary{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
-:root[data-theme="dark"] button.primary:hover{background:#91d7ae;border-color:#91d7ae}
-:root[data-theme="dark"] #pretabs .tab{background:#1b2820;border-color:var(--line);color:var(--ink);box-shadow:0 2px 8px #0002}
-:root[data-theme="dark"] #pretabs .tab::before{color:var(--mute)}
-:root[data-theme="dark"] #pretabs .tab[aria-selected="true"]{background:#20372a;border-color:#52775d;color:#a6e3bb;box-shadow:inset 0 0 0 1px #52775d,0 4px 12px #0002}
-:root[data-theme="dark"] #pretabs .prehint{background:var(--panel);border-color:var(--line);color:var(--mute)}
-:root[data-theme="dark"] #pretabs .prehint b{color:var(--ink)}
-:root[data-theme="dark"] #pretabs .prehint span+span{color:#9fddb4}
-:root[data-theme="dark"] .drop{background:#1b2820;border-color:#506d58;box-shadow:0 4px 16px #0002}
-:root[data-theme="dark"] .drop:hover,:root[data-theme="dark"] .drop.over{background:#202f25;border-color:var(--acc);box-shadow:0 8px 24px #0004}
-:root[data-theme="dark"] .drop b{color:var(--ink)}
-:root[data-theme="dark"] .drop::after{color:var(--mute)}
-:root[data-theme="dark"] .strip,:root[data-theme="dark"] .hub,:root[data-theme="dark"] .panel,:root[data-theme="dark"] details.sec,:root[data-theme="dark"] .card,:root[data-theme="dark"] .cardnone,:root[data-theme="dark"] #msg:not(:empty),:root[data-theme="dark"] .status:not(:empty){background:var(--panel);border-color:var(--line);box-shadow:0 2px 8px #0002}
-:root[data-theme="dark"] .hub .strip{box-shadow:none}
-:root[data-theme="dark"] .panel h2{background:var(--head);border-color:var(--line)}
-:root[data-theme="dark"] #work>.tabs .tab{color:var(--mute)}
-:root[data-theme="dark"] #work>.tabs .tab[aria-selected="true"]{background:var(--panel);border-color:var(--line);color:var(--acc);box-shadow:inset 0 2px var(--acc)}
-:root[data-theme="dark"] .card .v{color:var(--ink)}
-:root[data-theme="dark"] details.sec>summary{color:var(--ink)}
-:root[data-theme="dark"] th,:root[data-theme="dark"] td{border-color:#35483b}
-:root[data-theme="dark"] th{background:#24332a;color:#d1dfd4}
-:root[data-theme="dark"] tbody tr:nth-child(even){background:#202d24}
-:root[data-theme="dark"] tbody tr:hover{background:#293a2e}
-:root[data-theme="dark"] td select,:root[data-theme="dark"] fieldset input,:root[data-theme="dark"] fieldset select,:root[data-theme="dark"] .rep input,:root[data-theme="dark"] .rep select,:root[data-theme="dark"] .pf select,:root[data-theme="dark"] .pf input,:root[data-theme="dark"] .xfields input,:root[data-theme="dark"] .xfields select,:root[data-theme="dark"] #fix input,:root[data-theme="dark"] .tinfix{background:var(--field);color:var(--ink);border-color:var(--line)}
-:root[data-theme="dark"] fieldset{border-color:var(--line)}
-:root[data-theme="dark"] legend{color:var(--ink)}
-:root[data-theme="dark"] #xbar{background:#1b2820f5;border-color:#405448;border-top-color:#66846e;box-shadow:0 -8px 24px #0004}
-:root[data-theme="dark"] #xbar .xfields input,:root[data-theme="dark"] #xbar .xfields select,:root[data-theme="dark"] #xbar button:not(.primary){background:#121c16;border-color:#405448;color:var(--ink)}
-:root[data-theme="dark"] #xbar button:not(.primary):hover{background:#24332a}
-:root[data-theme="dark"] .xfields label{color:#d0ddd3}
-:root[data-theme="dark"] #sum,:root[data-theme="dark"] #d2307,:root[data-theme="dark"] #perdlg{background:#1b2820;color:var(--ink);border-color:var(--line);box-shadow:0 20px 60px #0008}
-:root[data-theme="dark"] #sum h2,:root[data-theme="dark"] #perdlg h2,:root[data-theme="dark"] #d2307tbl th{background:#24332a;border-color:var(--line);color:var(--ink)}
-:root[data-theme="dark"] #sum .act,:root[data-theme="dark"] #perdlg .peract{border-color:var(--line)}
-:root[data-theme="dark"] #d2307tbl td{border-color:var(--line)}
-:root[data-theme="dark"] #d2307tbl tr.sel:hover td{background:#293a2e}
-:root[data-theme="dark"] .eqdel{border-color:var(--bad);color:var(--bad)}
-@media(max-width:700px){.head-actions{gap:6px}.theme-toggle{padding:7px 9px;font-size:12px}}
 </style>
-<script>
-(function(){
-  var root=document.documentElement,theme='light';
-  try{theme=localStorage.getItem('reliefTheme')==='dark'?'dark':'light'}catch(e){}
-  function apply(next,save){
-    theme=next;root.dataset.theme=theme;
-    var button=document.getElementById('theme-toggle'),label=document.getElementById('theme-label');
-    if(button){
-      button.setAttribute('aria-pressed',String(theme==='dark'));
-      button.setAttribute('aria-label','Switch to '+(theme==='dark'?'light':'dark')+' mode');
-      label.textContent=theme==='dark'?'Light mode':'Dark mode';
-      button.firstElementChild.textContent=theme==='dark'?'☀':'◐';
-    }
-    document.querySelector('meta[name="theme-color"]').content=theme==='dark'?'#111a15':'#f5f7f3';
-    if(save)try{localStorage.setItem('reliefTheme',theme)}catch(e){}
-  }
-  apply(theme,false);
-  document.addEventListener('DOMContentLoaded',function(){
-    var button=document.getElementById('theme-toggle');
-    apply(theme,false);
-    button.addEventListener('click',function(){apply(theme==='dark'?'light':'dark',true)});
-  },{once:true});
-})();
-</script>
 </head>
 <body>
 <main>
 <header class="top"><h1><img class="logo" src="icon-192.png" width="40" height="40" alt="">Relief &amp; 1601-EQ Formatter</h1>
- <div class="head-actions"><button type="button" class="theme-toggle" id="theme-toggle" aria-label="Switch to dark mode" aria-pressed="false"><span aria-hidden="true">◐</span> <span id="theme-label">Dark mode</span></button><button type="button" class="login" id="login">Log in</button></div></header>
-<p class="privacy-note"><span class="privacy-dot" aria-hidden="true"></span>Your workbooks and generated files stay in this browser. When signed in, saved filer profiles (including tax and address details) and your account email are synced to your Firebase account.</p>
+ <button type="button" class="login" id="login">Log in</button></header>
 
 <div id="pretabs">
  <div class="tabs" role="tablist" aria-label="What do you want to make?">
@@ -935,7 +834,7 @@ function buildDat(recs,f){
 function csvLine(l){const o=[];let c='',q=false;for(const ch of l){if(ch==='"')q=!q;else if(ch===','&&!q){o.push(c);c=''}else c+=ch}o.push(c);return o}
 // Reads the header (first) line of an old DAT file and lines it up like the Purchases header:
 // [2] TIN [3] name [4-6] last/first/middle [7] trade name [8-9] address [18] RDO [19] period [20] fiscal month.
-// Purchases:  H,P,...  21 fields    Sales:  H,S,...  17 fields    1601-EQ (QAP):  HQAP,H1601EQ,TIN,branch,".",MM/YYYY,RDO  (no names or address)
+// Purchases:  H,P,...  21 fields    Sales:  H,S,...  17 fields    1601-EQ (QAP):  HQAP,H1601EQ,TIN,branch,"NAME",MM/YYYY,RDO  (one name line, no address)
 function parseDatHeader(text){
   const line=String(text).split(/\r?\n/).find(l=>l.trim());
   if(!line)return null;
@@ -1014,7 +913,7 @@ if(typeof document!=='undefined'&&document.getElementById('datpanel')){
       if(!p.noNames&&!$('#pf_name').value.trim())$('#pf_name').value=(p[3]||[p[4],p[5]].filter(Boolean).join(' ')).trim();
       const per=p[19]||p.per;
       msg('Loaded the details from '+file.name+' (a '+p.kind+' file'+(per?', its period was '+per:'')+').'+
-        (p.noNames?' It only has the TIN, branch and RDO, so the names and address were left as they are.':' Check the address fields, then click Save to keep them.'));
+        (p.noNames?' It has only the TIN, branch, RDO and one name line, so the names and address were left as they are.':' Check the address fields, then click Save to keep them.'));
     };
     r.readAsText(file,'latin1');e.target.value='';
   };
@@ -1283,7 +1182,10 @@ function eqConsolidate(recs){
 try{const c=document.getElementById('eqcons');if(c){c.checked=localStorage.getItem('reliefEqCons')!=='0';c.addEventListener('change',()=>{try{localStorage.setItem('reliefEqCons',c.checked?'1':'0')}catch(e){}if(window.renderCards)renderCards()})}}catch(e){}
 
 // ---- QAP 1601EQ DAT file ----
-// Header: HQAP,H1601EQ,TIN,branch,".",MM/YYYY,RDO   Detail: D1,1601EQ,seq,TIN,branch,names...,MM/YYYY,ATC,rate,income,tax   Control: C1,...,totals
+// Header: HQAP,H1601EQ,TIN,branch,"NAME",MM/YYYY,RDO   (NAME = the company name, or LAST FIRST MIDDLE for an individual)   Detail: D1,1601EQ,seq,TIN,branch,names...,MM/YYYY,ATC,rate,income,tax   Control: C1,...,totals
+// The filer's name in the 1601-EQ header: a non-individual is the company name; an individual is LAST NAME FIRST NAME MIDDLE NAME in one field
+function qapName(f){return f.cls==='Individual'?[f.ln,f.fn,f.mn].map(dclean).filter(Boolean).join(' '):dclean(f.co)}
+function qapNameErr(f){return f.cls==='Individual'?(f.ln&&f.fn?'':'Enter the Last Name and First Name.'):(f.co?'':'Enter the Company Name.')}
 function buildQapDat(recs,f,Y){
   const q=s=>'"'+s+'"',n2=v=>r2(v).toFixed(2),per=f.mm+'/'+f.yyyy;
   // One line per payee + branch + ATC + names (+ rate): the amounts of all rows (all months of the quarter) are added up,
@@ -1296,7 +1198,7 @@ function buildQapDat(recs,f,Y){
   });
   const rows=[...g.values()].sort((a,b)=>a.t9<b.t9?-1:a.t9>b.t9?1:0);   // by payee TIN; ties keep file order
   let si=0,st=0;
-  const L=['HQAP,H1601EQ,'+f.tin+','+f.br+',".",'+per+','+f.rdo.padStart(3,'0')];
+  const L=['HQAP,H1601EQ,'+f.tin+','+f.br+','+q(qapName(f))+','+per+','+f.rdo.padStart(3,'0')];
   rows.forEach((r,i)=>{
     const tax=r2(r.am*r.rt/100);si=r2(si+r.am);st=r2(st+tax);
     L.push(['D1','1601EQ',i+1,r.t9,r.br,q(r.co),q(r.ln),q(r.fn),q(r.mn),per,r.atc,n2(r.rt),n2(r.am),n2(tax)].join(','));
@@ -1307,6 +1209,7 @@ function buildQapDat(recs,f,Y){
 function genQap(){
   if(!eq.recs.length){msg('There are no 1601-EQ rows. Check the 1601-EQ section above.',1);return}
   const f=readFiler(true);if(f.err){msg(f.err,1);openFiler();return}
+  {const ne=qapNameErr(f);if(ne){msg(ne,1);openFiler();return}}      // the 1601-EQ header carries the filer's name
   const Y=+$('#eqyear').value||new Date().getFullYear();
   const ok=eq.recs.filter(r=>r.mo),skipped=eq.recs.length-ok.length;
   if(!ok.length){msg('No row has a readable month, so no DAT file was made.',1);return}
@@ -2349,6 +2252,7 @@ function genQapMonths(){
   const sp=eqMonths();
   if(!sp.months.length){msg('No row has a readable month, so no DAT files were made.',1);return}
   const f=readFiler(true);if(f.err){msg(f.err,1);openFiler();return}
+  {const ne=qapNameErr(f);if(ne){msg(ne,1);openFiler();return}}      // the 1601-EQ header carries the filer's name
   const nb=sp.months.reduce((n,x)=>n+x.recs.filter(r=>eqProbs(r).length).length,0);
   if(nb&&!confirm(nb+' row(s) have a missing or wrong TIN (or the filer\'s own TIN), name, ATC or rate. Generate the DAT files anyway?'))return;
   const files=sp.months.map(x=>{
